@@ -6,9 +6,12 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
+    "@elysiajs/swagger": "^1.1.1",
     "elysia": "latest"
   },
   "devDependencies": {
+    "@tsconfig/bun": "^1.0.7",
+    "@types/bun": "^1.1.10",
     "bun-types": "latest"
   },
   "module": "src/index.js"
