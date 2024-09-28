@@ -1,4 +1,3 @@
-import { Stream } from "@elysiajs/stream";
 import { Elysia, t } from "elysia";
 
 export const openaiChat = new Elysia({
@@ -38,52 +37,12 @@ export const openaiChat = new Elysia({
   .post(
     "/v1/chat/completions",
     async ({ body }) => {
-      const { messages, stream } = body;
+      const { messages } = body;
       const lastMessage = messages[messages.length - 1].content;
-      const meowWords = lastMessage.split(" ").map(() => "meow");
-      if (stream) {
-        return new Stream(async (stream) => {
-          for (const word of meowWords) {
-            stream.send(
-              JSON.stringify({
-                id: `${Date.now()}`,
-                object: "chat.completion.chunk",
-                created: Date.now(),
-                model: "meowgpt",
-                choices: [
-                  {
-                    index: 0,
-                    delta: {
-                      content: word + " ",
-                    },
-                    finish_reason: null,
-                  },
-                ],
-              })
-            );
-          }
-
-          // Send the final chunk
-          stream.send(
-            JSON.stringify({
-              id: `${Date.now()}`,
-              object: "chat.completion.chunk",
-              created: Date.now(),
-              model: "meowgpt",
-              choices: [
-                {
-                  index: 0,
-                  delta: {},
-                  finish_reason: "stop",
-                },
-              ],
-            })
-          );
-
-          stream.close();
-        }) as any;
-      }
-
+      const meowMessage = lastMessage
+        .split(" ")
+        .map(() => "meow")
+        .join(" ");
       return {
         id: `${Date.now()}`,
         object: "chat.completion",
@@ -94,7 +53,7 @@ export const openaiChat = new Elysia({
             index: 0,
             message: {
               role: "assistant",
-              content: meowWords.join(" "),
+              content: meowMessage,
             },
             finish_reason: "stop",
           },
@@ -115,7 +74,6 @@ export const openaiChat = new Elysia({
             content: t.String(),
           })
         ),
-        stream: t.Optional(t.Nullable(t.Boolean())),
       }),
       response: t.Object({
         id: t.String(),
