@@ -1,58 +1,98 @@
+import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
-import { Elysia, t } from "elysia";
-import Redis from "ioredis";
+import { Elysia } from "elysia";
+import { line } from "./apis/line";
+import { getEventLog } from "./eventLog";
 
-const redis = new Redis(Bun.env["REDIS_URL"]!);
+let apiDescription = `**A set of mock APIs for testing.**
 
-async function addEventLog(topic: string, type: string, payload: any) {
-  const eventData = JSON.stringify({ type, payload, timestamp: Date.now() });
-  await redis.rpush(`mockapis:events:${topic}`, eventData);
+# How it works
+
+When you use the mock APIs, the endpoints that you call may generate an event that you can later inspect.
+
+For example, your app may call a ‘send SMS’ endpoint.
+You can configure your app code to direct the request to the mock API instead of the real SMS provider when a test number is used.
+Instead of sending a real message, the mock API will save the message to the event log.
+Your tests can then use the ‘Get events’ endpoint to retrieve the stored events and verify if your app behaves correctly.
+
+Note that the contents in the event log are deleted after a while, so only use these endpoints for short-term testing purposes.
+
+# Caveats
+
+These mock APIs are only designed for automated testing convenience only, particularly when writing end-to-end tests.
+It may not accurately simulate the behavior of the real APIs.
+
+For example, most APIs here only model the success case.
+When they return an error, it is usually a generic error message that does not reflect the real error that would occur in the real API.
+It also doesn’t validate the input data as strictly as the real API would.
+Therefore, when integrating, you should always test your app with the real APIs, and only use these mock APIs to make writing automated end-to-end tests more convenient.
+
+For higher testing fidelity, if you are able to obtain a sandbox account from the real API provider, you should use that instead of the mock APIs.
+For testing specific API edge cases, you should also consider an approach where [requests to the real APIs are recorded on first test run and replayed on subsequent runs](https://github.com/vcr/vcr), if your test framework supports that kind of thing.
+
+# Authentication
+
+The mock APIs do not require authentication.
+
+# CORS
+
+The mock APIs are configured to allow CORS requests from any origin.
+`;
+
+if (Bun.env["DEMO_INSTANCE"]) {
+  apiDescription += `
+
+# About the demo instance
+
+This demo instance is hosted on a free [Render](https://render.com/) instance.
+It may be slow to respond due to the free tier limitations.
+Feel free to use it, but keep in mind that (1) there is no uptime or reliability guarantee, and (2) the data is not protected and may be lost at any time.
+If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
-
-async function getEventLog(topic: string) {
-  return (await redis.lrange(`mockapis:events:${topic}`, 0, -1)).map((event) =>
-    JSON.parse(event)
-  );
-}
-
-const line = new Elysia({ prefix: "/line" }).post(
-  "/v2/bot/message/push",
-  async ({ body }) => {
-    const { messages } = body;
-    const sentMessages = messages.map((_, index) => ({
-      id: `${Date.now()}${index}`,
-      quoteToken: Math.random().toString(36).substring(2, 15),
-    }));
-    const topic = `line:${body.to}`;
-    console.log(topic);
-    await addEventLog(topic, "push", { body, sentMessages });
-    return {
-      sentMessages,
-    };
-  },
-  {
-    body: t.Object({
-      to: t.String(),
-      messages: t.Array(
-        t.Object({
-          type: t.String(),
-          text: t.String(),
-        })
-      ),
-      notificationDisabled: t.Optional(t.Boolean()),
-      customAggregationUnits: t.Optional(t.Array(t.String())),
-    }),
-  }
-);
 
 const app = new Elysia()
-  .use(swagger())
+  .use(cors())
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: "Mock APIs",
+          description: apiDescription,
+          version: "0.0.0",
+        },
+        tags: [
+          {
+            name: "Introspection",
+            description: "Provides access to raw data in the event log.",
+          },
+        ],
+      },
+    })
+  )
+  .get(
+    "/events/:topic",
+    async ({ params }) => {
+      console.log(params.topic);
+      return getEventLog(params.topic);
+    },
+    {
+      detail: {
+        summary: "Get events",
+        tags: ["Introspection"],
+      },
+    }
+  )
   .use(line)
-  .get("/events/:topic", async ({ params }) => {
-    console.log(params.topic);
-    return getEventLog(params.topic);
-  })
-  .get("/", () => "Hello Elysia")
+  .get(
+    "/",
+    async () => {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: "/swagger" },
+      });
+    },
+    { detail: { hide: true } }
+  )
   .listen(+(Bun.env["PORT"] || 46982));
 
 export type App = typeof app;
