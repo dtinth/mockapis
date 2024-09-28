@@ -3,6 +3,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { kio } from "./apis/dtinth/kio";
 import { line } from "./apis/line/line";
+import { openaiChat } from "./apis/openai/chat";
 import { getEventLog } from "./eventLog";
 
 let apiDescription = `**A set of mock APIs for testing.**
@@ -89,6 +90,7 @@ const app = new Elysia()
   )
   .use(line)
   .use(kio)
+  .use(openaiChat)
   .get(
     "/",
     async () => {
@@ -104,5 +106,5 @@ const app = new Elysia()
 export type App = typeof app;
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+  `� Elysia is running at ${app.server?.hostname}:${app.server?.port}`
 );
