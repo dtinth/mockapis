@@ -1,10 +1,15 @@
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import { line } from "./apis/line";
+import { kio } from "./apis/dtinth/kio";
+import { line } from "./apis/line/line";
 import { getEventLog } from "./eventLog";
 
 let apiDescription = `**A set of mock APIs for testing.**
+
+# Test endpoints
+
+Endpoints that exist to facilitate testing, but aren’t otherwise present in the real API, are marked with \`_test\` in the path.
 
 # How it works
 
@@ -70,7 +75,7 @@ const app = new Elysia()
     })
   )
   .get(
-    "/events/:topic",
+    "/_test/events/:topic",
     async ({ params }) => {
       console.log(params.topic);
       return getEventLog(params.topic);
@@ -83,6 +88,7 @@ const app = new Elysia()
     }
   )
   .use(line)
+  .use(kio)
   .get(
     "/",
     async () => {

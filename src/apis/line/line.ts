@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { addEventLog } from "../eventLog";
+import { addEventLog } from "../../eventLog";
 
 export const line = new Elysia({ prefix: "/line", tags: ["LINE"] }).post(
   "/v2/bot/message/push",
