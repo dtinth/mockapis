@@ -6,18 +6,12 @@ interface Ticket {
   firstname: string;
   lastname: string;
   ticketTypeId: number;
+  referenceCode: string;
 }
 
 interface TicketType {
   id: number;
   name: string;
-}
-
-interface EventInfo {
-  eventTitle: string;
-  checkedIn: number;
-  total: number;
-  ticketTypes: TicketType[];
 }
 
 const eventLog = createEventLog<{
@@ -43,7 +37,7 @@ async function getState(eventId: string) {
   const state = {
     tickets: new Map<number, Ticket>(),
     referenceCodeMap: new Map<string, number>(),
-    checkedInIds: new Set<number>(),
+    checkedInIds: new Map<number, number>(),
     ticketTypes: [
       { id: 10001, name: "Regular" },
       { id: 10002, name: "VIP" },
@@ -58,6 +52,7 @@ async function getState(eventId: string) {
         firstname,
         lastname,
         ticketTypeId,
+        referenceCode,
       };
       state.tickets.set(ticket.id, ticket);
       state.referenceCodeMap.set(referenceCode, ticket.id);
@@ -67,7 +62,7 @@ async function getState(eventId: string) {
         state.referenceCodeMap.get(referenceCode)!
       );
       if (ticket) {
-        state.checkedInIds.add(ticket.id);
+        state.checkedInIds.set(ticket.id, event.timestamp);
       }
     } else if (event.type === "undoCheckIn") {
       const { referenceCode } = event.payload;
@@ -83,6 +78,7 @@ async function getState(eventId: string) {
 }
 
 const Ticket = t.Object({
+  id: t.Number(),
   firstname: t.String(),
   lastname: t.String(),
   ticketTypeId: t.Number(),
@@ -113,19 +109,54 @@ export const kio = new Elysia({
         }),
       }
     )
-    .get("/_test/tickets", async ({ params }) => {
-      const state = await getState(params.eventId);
-      return Array.from(state.tickets.values());
-    })
-    .get("/info", async ({ params }) => {
-      const state = await getState(params.eventId);
-      return {
-        eventTitle: "test event",
-        checkedIn: state.checkedInIds.size,
-        total: state.tickets.size,
-        ticketTypes: state.ticketTypes,
-      };
-    })
+    .get(
+      "/_test/tickets",
+      async ({ params }) => {
+        const state = await getState(params.eventId);
+        return Array.from(state.tickets.values(), (ticket) => {
+          const usedAt = state.checkedInIds.get(ticket.id);
+          return {
+            ticketInfo: ticket,
+            referenceCode: ticket.referenceCode,
+            usedAt: usedAt ? new Date(usedAt).toISOString() : undefined,
+          };
+        });
+      },
+      {
+        response: t.Array(
+          t.Object({
+            ticketInfo: Ticket,
+            referenceCode: t.String(),
+            usedAt: t.Optional(t.String()),
+          })
+        ),
+      }
+    )
+    .get(
+      "/info",
+      async ({ params }) => {
+        const state = await getState(params.eventId);
+        return {
+          eventTitle: "test event",
+          checkedIn: state.checkedInIds.size,
+          total: state.tickets.size,
+          ticketTypes: state.ticketTypes,
+        };
+      },
+      {
+        response: t.Object({
+          eventTitle: t.String(),
+          checkedIn: t.Number(),
+          total: t.Number(),
+          ticketTypes: t.Array(
+            t.Object({
+              id: t.Number(),
+              name: t.String(),
+            })
+          ),
+        }),
+      }
+    )
     .post(
       "/checkIn",
       async ({ params, body }) => {
