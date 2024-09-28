@@ -18,3 +18,21 @@ export async function getEventLog(topic: string) {
     (event) => JSON.parse(event)
   );
 }
+
+type Values<T extends Record<string, any>> = T[keyof T];
+
+export type EventLog<T extends Record<string, any>> = Values<{
+  [K in keyof T]: {
+    type: K;
+    payload: T[K];
+    timestamp: number;
+  };
+}>[];
+
+export function createEventLog<T extends Record<string, any>>() {
+  return {
+    add: (topic: string, type: keyof T, payload: T[keyof T]) =>
+      addEventLog(topic, type as string, payload),
+    get: (topic: string) => getEventLog(topic) as Promise<EventLog<T>>,
+  };
+}

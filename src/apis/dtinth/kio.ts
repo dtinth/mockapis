@@ -1,15 +1,205 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
+import { createEventLog } from "../../eventLog";
+
+interface Ticket {
+  id: number;
+  firstname: string;
+  lastname: string;
+  ticketTypeId: number;
+}
+
+interface TicketType {
+  id: number;
+  name: string;
+}
+
+interface EventInfo {
+  eventTitle: string;
+  checkedIn: number;
+  total: number;
+  ticketTypes: TicketType[];
+}
+
+const eventLog = createEventLog<{
+  register: {
+    ticketTypeId: number;
+    firstname: string;
+    lastname: string;
+    referenceCode: string;
+  };
+  checkIn: {
+    referenceCode: string;
+  };
+  undoCheckIn: {
+    referenceCode: string;
+  };
+}>();
+
+function getTopic(eventId: string) {
+  return `dtinth/kio:${eventId}`;
+}
+
+async function getState(eventId: string) {
+  const state = {
+    tickets: new Map<number, Ticket>(),
+    referenceCodeMap: new Map<string, number>(),
+    checkedInIds: new Set<number>(),
+    ticketTypes: [
+      { id: 10001, name: "Regular" },
+      { id: 10002, name: "VIP" },
+    ] as TicketType[],
+  };
+  for (const event of await eventLog.get(getTopic(eventId))) {
+    if (event.type === "register") {
+      const { ticketTypeId, firstname, lastname, referenceCode } =
+        event.payload;
+      const ticket: Ticket = {
+        id: state.tickets.size + 1,
+        firstname,
+        lastname,
+        ticketTypeId,
+      };
+      state.tickets.set(ticket.id, ticket);
+      state.referenceCodeMap.set(referenceCode, ticket.id);
+    } else if (event.type === "checkIn") {
+      const { referenceCode } = event.payload;
+      const ticket = state.tickets.get(
+        state.referenceCodeMap.get(referenceCode)!
+      );
+      if (ticket) {
+        state.checkedInIds.add(ticket.id);
+      }
+    } else if (event.type === "undoCheckIn") {
+      const { referenceCode } = event.payload;
+      const ticket = state.tickets.get(
+        state.referenceCodeMap.get(referenceCode)!
+      );
+      if (ticket) {
+        state.checkedInIds.delete(ticket.id);
+      }
+    }
+  }
+  return state;
+}
+
+const Ticket = t.Object({
+  firstname: t.String(),
+  lastname: t.String(),
+  ticketTypeId: t.Number(),
+});
 
 export const kio = new Elysia({
   prefix: "/dtinth/kio",
   tags: ["dtinth/kio"],
-}).group("/events/:event", (app) =>
-  app.get("/info", async () => {
-    return {
-      eventTitle: "test event",
-      checkedIn: 0,
-      total: 0,
-      ticketTypes: [],
-    };
-  })
+}).group("/events/:eventId", (app) =>
+  app
+    .post(
+      "/_test/register",
+      async ({ params, body, set }) => {
+        const state = await getState(params.eventId);
+        if (!state.ticketTypes.some((type) => type.id === body.ticketTypeId)) {
+          set.status = "Bad Request";
+          return { ok: false, error: "Invalid ticket type" };
+        }
+        await eventLog.add(getTopic(params.eventId), "register", body);
+        return { ok: true };
+      },
+      {
+        body: t.Object({
+          ticketTypeId: t.Number(),
+          firstname: t.String(),
+          lastname: t.String(),
+          referenceCode: t.String(),
+        }),
+      }
+    )
+    .get("/_test/tickets", async ({ params }) => {
+      const state = await getState(params.eventId);
+      return Array.from(state.tickets.values());
+    })
+    .get("/info", async ({ params }) => {
+      const state = await getState(params.eventId);
+      return {
+        eventTitle: "test event",
+        checkedIn: state.checkedInIds.size,
+        total: state.tickets.size,
+        ticketTypes: state.ticketTypes,
+      };
+    })
+    .post(
+      "/checkIn",
+      async ({ params, body }) => {
+        const { refCode } = body as { refCode: string };
+        const state = await getState(params.eventId);
+        const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
+        if (!ticket) {
+          return {
+            checkedIn: state.checkedInIds.size,
+            checkedInTickets: [],
+            usedTickets: [],
+          };
+        }
+        if (state.checkedInIds.has(ticket.id)) {
+          return {
+            checkedIn: state.checkedInIds.size,
+            checkedInTickets: [],
+            usedTickets: [ticket],
+          };
+        }
+        await eventLog.add(getTopic(params.eventId), "checkIn", {
+          referenceCode: refCode,
+        });
+        return {
+          checkedIn: state.checkedInIds.size + 1,
+          checkedInTickets: [ticket],
+          usedTickets: [],
+        };
+      },
+      {
+        body: t.Object({
+          refCode: t.String(),
+        }),
+        response: t.Object({
+          checkedIn: t.Number(),
+          checkedInTickets: t.Array(Ticket),
+          usedTickets: t.Array(Ticket),
+        }),
+      }
+    )
+    .post(
+      "/checkOut",
+      async ({ params, body }) => {
+        const { refCode } = body as { refCode: string };
+        const state = await getState(params.eventId);
+        const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
+        if (!ticket) {
+          return {
+            checkedIn: state.checkedInIds.size,
+            undoneTickets: [],
+          };
+        }
+        if (!state.checkedInIds.has(ticket.id)) {
+          return {
+            checkedIn: state.checkedInIds.size,
+            undoneTickets: [],
+          };
+        }
+        await eventLog.add(getTopic(params.eventId), "undoCheckIn", {
+          referenceCode: refCode,
+        });
+        return {
+          checkedIn: state.checkedInIds.size - 1,
+          undoneTickets: [ticket],
+        };
+      },
+      {
+        body: t.Object({
+          refCode: t.String(),
+        }),
+        response: t.Object({
+          checkedIn: t.Number(),
+          undoneTickets: t.Array(Ticket),
+        }),
+      }
+    )
 );
