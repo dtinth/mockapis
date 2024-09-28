@@ -1,7 +1,8 @@
 import { Elysia, t } from "elysia";
+import { defineApi } from "../../defineApi";
 import { addEventLog } from "../../eventLog";
 
-export const line = new Elysia({ prefix: "/line", tags: ["LINE"] }).post(
+const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] }).post(
   "/v2/bot/message/push",
   async ({ body }) => {
     const { messages } = body;
@@ -34,3 +35,10 @@ export const line = new Elysia({ prefix: "/line", tags: ["LINE"] }).post(
     detail: { summary: "Send push message" },
   }
 );
+
+export const line = defineApi({
+  tag: "LINE",
+  description:
+    "A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/).",
+  elysia,
+});

@@ -1,6 +1,6 @@
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
-import { Elysia } from "elysia";
+import { Elysia, type AnyElysia } from "elysia";
 import { kio } from "./apis/dtinth/kio";
 import { line } from "./apis/line/line";
 import { openaiChat } from "./apis/openai/chat";
@@ -56,41 +56,55 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const app = new Elysia()
-  .use(cors())
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Mock APIs",
-          description: apiDescription,
-          version: "0.0.0",
-        },
-        tags: [
-          {
-            name: "Introspection",
-            description: "Provides access to raw data in the event log.",
+const apis = ([line, openaiChat, kio] as const).toSorted((a, b) =>
+  a.tag.localeCompare(b.tag)
+);
+
+function applyApis<E extends AnyElysia>(elysia: E) {
+  for (const api of apis) {
+    elysia = elysia.use(api.elysia) as typeof elysia;
+  }
+  return elysia;
+}
+
+const app = applyApis(
+  new Elysia()
+    .use(cors())
+    .use(
+      swagger({
+        documentation: {
+          info: {
+            title: "Mock APIs",
+            description: apiDescription,
+            version: "0.0.0",
           },
-        ],
+          tags: [
+            {
+              name: "Introspection",
+              description: "Provides access to raw data in the event log.",
+            },
+            ...apis.map((api) => ({
+              name: api.tag,
+              description: api.description,
+            })),
+          ],
+        },
+      })
+    )
+    .get(
+      "/_test/events/:topic",
+      async ({ params }) => {
+        console.log(params.topic);
+        return getEventLog(params.topic);
       },
-    })
-  )
-  .get(
-    "/_test/events/:topic",
-    async ({ params }) => {
-      console.log(params.topic);
-      return getEventLog(params.topic);
-    },
-    {
-      detail: {
-        summary: "Get events",
-        tags: ["Introspection"],
-      },
-    }
-  )
-  .use(line)
-  .use(kio)
-  .use(openaiChat)
+      {
+        detail: {
+          summary: "Get events",
+          tags: ["Introspection"],
+        },
+      }
+    )
+)
   .get(
     "/",
     async () => {

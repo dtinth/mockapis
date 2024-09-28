@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { defineApi } from "../../defineApi";
 import { createEventLog } from "../../eventLog";
 
 interface Ticket {
@@ -84,7 +85,7 @@ const Ticket = t.Object({
   ticketTypeId: t.Number(),
 });
 
-export const kio = new Elysia({
+const elysia = new Elysia({
   prefix: "/dtinth/kio",
   tags: ["dtinth/kio"],
 }).group("/events/:eventId", (app) =>
@@ -241,3 +242,10 @@ export const kio = new Elysia({
       }
     )
 );
+
+export const kio = defineApi({
+  tag: "dtinth/kio",
+  description:
+    "A mock API that implements the endpoints expected by [dtinth/kio](https://github.com/dtinth/kio), a geeky self-checkin kiosk.",
+  elysia,
+});
