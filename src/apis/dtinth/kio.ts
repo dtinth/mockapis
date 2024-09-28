@@ -107,6 +107,9 @@ export const kio = new Elysia({
           lastname: t.String(),
           referenceCode: t.String(),
         }),
+        detail: {
+          summary: "[Test] Register a usable ticket in the event",
+        },
       }
     )
     .get(
@@ -130,6 +133,7 @@ export const kio = new Elysia({
             usedAt: t.Optional(t.String()),
           })
         ),
+        detail: { summary: "[Test] Get all tickets" },
       }
     )
     .get(
@@ -155,6 +159,7 @@ export const kio = new Elysia({
             })
           ),
         }),
+        detail: { summary: "Get event information" },
       }
     )
     .post(
@@ -195,6 +200,7 @@ export const kio = new Elysia({
           checkedInTickets: t.Array(Ticket),
           usedTickets: t.Array(Ticket),
         }),
+        detail: { summary: "Check in a ticket" },
       }
     )
     .post(
@@ -231,6 +237,7 @@ export const kio = new Elysia({
           checkedIn: t.Number(),
           undoneTickets: t.Array(Ticket),
         }),
+        detail: { summary: "Undo check-in" },
       }
     )
 );
