@@ -4,7 +4,7 @@ import { Elysia, type AnyElysia } from "elysia";
 import { kio } from "./apis/dtinth/kio";
 import { line } from "./apis/line/line";
 import { openaiChat } from "./apis/openai/chat";
-import { getEventLog } from "./eventLog";
+import { getEvents } from "./eventLog";
 
 let apiDescription = `**A set of mock APIs for testing.**
 
@@ -94,7 +94,7 @@ const app = applyApis(
     .get(
       "/_test/events/:topic",
       async ({ params }) => {
-        return getEventLog(params.topic);
+        return getEvents(params.topic);
       },
       {
         detail: {
