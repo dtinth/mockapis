@@ -4,14 +4,14 @@ import { addEventLog } from "../../eventLog";
 
 const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] }).post(
   "/v2/bot/message/push",
-  async ({ body }) => {
+  async ({ body, set }) => {
     const { messages } = body;
     const sentMessages = messages.map((_, index) => ({
       id: `${Date.now()}${index}`,
       quoteToken: Math.random().toString(36).substring(2, 15),
     }));
     const topic = `line:${body.to}`;
-    console.log(topic);
+    set.headers["x-mockapis-topic"] = topic;
     await addEventLog(topic, "push", { body, sentMessages });
     return {
       sentMessages,

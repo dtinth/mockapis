@@ -1,12 +1,11 @@
-import { edenFetch } from "@elysiajs/eden";
 import { expect, test } from "bun:test";
-import type { App } from "../src/index";
+import createClient from "openapi-fetch";
+import type { paths } from "./api.generated";
 
-const api = edenFetch<App>("http://localhost:46982");
+const api = createClient<paths>({ baseUrl: "http://localhost:46982" });
 
 test("sends message", async () => {
-  const res = await api("/line/v2/bot/message/push", {
-    method: "POST",
+  const res = await api.POST("/line/v2/bot/message/push", {
     body: {
       to: "Umeow",
       messages: [

@@ -34,7 +34,7 @@ function getTopic(eventId: string) {
   return `dtinth/kio:${eventId}`;
 }
 
-async function getState(eventId: string) {
+async function getState(topic: string) {
   const state = {
     tickets: new Map<number, Ticket>(),
     referenceCodeMap: new Map<string, number>(),
@@ -44,7 +44,7 @@ async function getState(eventId: string) {
       { id: 10002, name: "VIP" },
     ] as TicketType[],
   };
-  for (const event of await eventLog.get(getTopic(eventId))) {
+  for (const event of await eventLog.get(topic)) {
     if (event.type === "register") {
       const { ticketTypeId, firstname, lastname, referenceCode } =
         event.payload;
@@ -90,15 +90,20 @@ const elysia = new Elysia({
   tags: ["dtinth/kio"],
 }).group("/events/:eventId", (app) =>
   app
+    .derive(({ params, set }) => {
+      const topic = getTopic(params["eventId"]);
+      set.headers["x-mockapis-topic"] = topic;
+      return { topic };
+    })
     .post(
       "/_test/register",
-      async ({ params, body, set }) => {
-        const state = await getState(params.eventId);
+      async ({ body, set, topic }) => {
+        const state = await getState(topic);
         if (!state.ticketTypes.some((type) => type.id === body.ticketTypeId)) {
           set.status = "Bad Request";
           return { ok: false, error: "Invalid ticket type" };
         }
-        await eventLog.add(getTopic(params.eventId), "register", body);
+        await eventLog.add(topic, "register", body);
         return { ok: true };
       },
       {
@@ -115,8 +120,8 @@ const elysia = new Elysia({
     )
     .get(
       "/_test/tickets",
-      async ({ params }) => {
-        const state = await getState(params.eventId);
+      async ({ topic }) => {
+        const state = await getState(topic);
         return Array.from(state.tickets.values(), (ticket) => {
           const usedAt = state.checkedInIds.get(ticket.id);
           return {
@@ -139,8 +144,8 @@ const elysia = new Elysia({
     )
     .get(
       "/info",
-      async ({ params }) => {
-        const state = await getState(params.eventId);
+      async ({ topic }) => {
+        const state = await getState(topic);
         return {
           eventTitle: "test event",
           checkedIn: state.checkedInIds.size,
@@ -165,9 +170,9 @@ const elysia = new Elysia({
     )
     .post(
       "/checkIn",
-      async ({ params, body }) => {
+      async ({ body, topic }) => {
         const { refCode } = body as { refCode: string };
-        const state = await getState(params.eventId);
+        const state = await getState(topic);
         const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
         if (!ticket) {
           return {
@@ -183,7 +188,7 @@ const elysia = new Elysia({
             usedTickets: [ticket],
           };
         }
-        await eventLog.add(getTopic(params.eventId), "checkIn", {
+        await eventLog.add(topic, "checkIn", {
           referenceCode: refCode,
         });
         return {
@@ -206,9 +211,9 @@ const elysia = new Elysia({
     )
     .post(
       "/checkOut",
-      async ({ params, body }) => {
+      async ({ body, topic }) => {
         const { refCode } = body as { refCode: string };
-        const state = await getState(params.eventId);
+        const state = await getState(topic);
         const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
         if (!ticket) {
           return {
@@ -222,7 +227,7 @@ const elysia = new Elysia({
             undoneTickets: [],
           };
         }
-        await eventLog.add(getTopic(params.eventId), "undoCheckIn", {
+        await eventLog.add(topic, "undoCheckIn", {
           referenceCode: refCode,
         });
         return {

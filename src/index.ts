@@ -56,12 +56,12 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const apis = ([line, openaiChat, kio] as const).toSorted((a, b) =>
-  a.tag.localeCompare(b.tag)
-);
+const apis = [openaiChat, line, kio] as const;
+
+const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
 
 function applyApis<E extends AnyElysia>(elysia: E) {
-  for (const api of apis) {
+  for (const api of sortedApis) {
     elysia = elysia.use(api.elysia) as typeof elysia;
   }
   return elysia;
@@ -94,7 +94,6 @@ const app = applyApis(
     .get(
       "/_test/events/:topic",
       async ({ params }) => {
-        console.log(params.topic);
         return getEventLog(params.topic);
       },
       {
