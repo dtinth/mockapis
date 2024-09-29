@@ -9,7 +9,7 @@ The service provides **mock endpoints** and **test endpoints.**
 
 Contributions for more APIs are welcome!
 
-# Example use case
+## Example use case
 
 Imagine you are developing an application that sends SMS messages through an SMS API provider, and you want to write end-to-end tests your app that verifies the SMS functionality. You can:
 
