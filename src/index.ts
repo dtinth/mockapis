@@ -15,18 +15,19 @@ The service provides **mock endpoints** and **test endpoints.**
 - **Mock endpoints** are endpoints that simulate the behavior of the real service. They should be called from your application code.
 - **Test endpoints** are endpoints that aren’t present in the real service, but are provided here to help you test your application. They should be called from your test code. These endpoint facilitates tasks such as setting up scenarios and verifying the state of the system.
 
-# How it works
+Contributions for more APIs are welcome! Feel free to submit pull requests to [dtinth/mockapis](https://github.com/dtinth/mockapis).
 
-When you use the mock APIs, the endpoints that you call may generate an event that you can later inspect.
+# Example use case
 
-For example, your app may call a ‘send SMS’ endpoint.
-You can configure your app code to direct the request to the mock API instead of the real SMS provider when a test number is used.
-Instead of sending a real message, the mock API will save the message to the event log.
-Your tests can then use the ‘Get events’ endpoint to retrieve the stored events and verify if your app behaves correctly.
+Imagine you are developing an application that sends SMS messages through an SMS API provider, and you want to write end-to-end tests your app that verifies the SMS functionality. You can:
 
-Note that the contents in the event log are deleted after a while, so only use these endpoints for short-term testing purposes.
+1. Configure your application code to send SMS messages through the mock SMS API instead of the real API when certain conditions are met (e.g. when the phone number matches a certain pattern). (Make sure to turn this off in production!)
+2. Write your end-to-end tests, filling in the phone number with a test phone number. This should cause your application to send the SMS through the mock SMS API. Instead of sending a real SMS, the mock SMS API will temporarily store the SMS message in the database.
+3. Call the test endpoint to retrieve the SMS messages sent to the test phone number, and verify that the SMS message was sent correctly.
 
 # Caveats
+
+## Limited fidelity
 
 These mock APIs are only designed for automated testing convenience only, particularly when writing end-to-end tests.
 It may not accurately simulate the behavior of the real APIs.
@@ -36,12 +37,19 @@ When they return an error, it is usually a generic error message that does not r
 It also doesn’t validate the input data as strictly as the real API would.
 Therefore, when integrating, you should always test your app with the real APIs, and only use these mock APIs to make writing automated end-to-end tests more convenient.
 
+Pull requests that improve the fidelity of the mock APIs are welcome. Submit them to [dtinth/mockapis](https://github.com/dtinth/mockapis).
+
 For higher testing fidelity, if you are able to obtain a sandbox account from the real API provider, you should use that instead of the mock APIs.
 For testing specific API edge cases, you should also consider an approach where [requests to the real APIs are recorded on first test run and replayed on subsequent runs](https://github.com/vcr/vcr), if your test framework supports that kind of thing.
 
+## Data persistence
+
+While the mock APIs are backed by a database (so that you can retrieve the data you have sent to the mock APIs),
+it is designed for short-term storage only. After a while, the data will be deleted.
+
 # Authentication
 
-The mock APIs do not require authentication.
+The mock APIs do not require authentication. You can still provide an Authorization header with any value, but it will be ignored.
 
 # CORS
 

@@ -7,6 +7,16 @@ The service provides **mock endpoints** and **test endpoints.**
 - **Mock endpoints** are endpoints that simulate the behavior of the real service. They should be called from your application code.
 - **Test endpoints** are endpoints that aren’t present in the real service, but are provided here to help you test your application. They should be called from your test code. These endpoint facilitates tasks such as setting up scenarios and verifying the state of the system.
 
+Contributions for more APIs are welcome!
+
+# Example use case
+
+Imagine you are developing an application that sends SMS messages through an SMS API provider, and you want to write end-to-end tests your app that verifies the SMS functionality. You can:
+
+1. Configure your application code to send SMS messages through the mock SMS API instead of the real API when certain conditions are met (e.g. when the phone number matches a certain pattern). (Make sure to turn this off in production!)
+2. Write your end-to-end tests, filling in the phone number with a test phone number. This should cause your application to send the SMS through the mock SMS API. Instead of sending a real SMS, the mock SMS API will temporarily store the SMS message in the database.
+3. Call the test endpoint to retrieve the SMS messages sent to the test phone number, and verify that the SMS message was sent correctly.
+
 ## Demo
 
 You can explore the available APIs and their documentation at our demo instance:
