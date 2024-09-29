@@ -2,6 +2,11 @@
 
 A collection of mock API endpoints designed to facilitate end-to-end testing development. This project provides a set of simulated APIs that mimic real-world services, allowing developers to test their applications without relying on actual external services.
 
+The service provides **mock endpoints** and **test endpoints.**
+
+- **Mock endpoints** are endpoints that simulate the behavior of the real service. They should be called from your application code.
+- **Test endpoints** are endpoints that aren’t present in the real service, but are provided here to help you test your application. They should be called from your test code. These endpoint facilitates tasks such as setting up scenarios and verifying the state of the system.
+
 ## Demo
 
 You can explore the available APIs and their documentation at our demo instance:

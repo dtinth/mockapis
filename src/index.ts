@@ -4,13 +4,16 @@ import { Elysia, type AnyElysia } from "elysia";
 import { kio } from "./apis/dtinth/kio";
 import { line } from "./apis/line/line";
 import { openaiChat } from "./apis/openai/chat";
+import { vonage } from "./apis/vonage/sms";
 import { getEvents } from "./eventLog";
 
-let apiDescription = `**A set of mock APIs for testing.**
+let apiDescription = `**A collection of mock API endpoints of various services,** designed to facilitate end-to-end testing development.
+This project provides a set of simulated APIs that mimic the real services, allowing developers to test their applications without relying on actual external services.
 
-# Test endpoints
+The service provides **mock endpoints** and **test endpoints.**
 
-Endpoints that exist to facilitate testing, but aren’t otherwise present in the real API, are marked with \`_test\` in the path.
+- **Mock endpoints** are endpoints that simulate the behavior of the real service. They should be called from your application code.
+- **Test endpoints** are endpoints that aren’t present in the real service, but are provided here to help you test your application. They should be called from your test code. These endpoint facilitates tasks such as setting up scenarios and verifying the state of the system.
 
 # How it works
 
@@ -56,7 +59,7 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const apis = [openaiChat, line, kio] as const;
+const apis = [openaiChat, line, kio, vonage] as const;
 
 const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
 
