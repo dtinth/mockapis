@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { api } from "./api";
+import { api } from "./test-utils";
 
 test("sends message", async () => {
   const tester = new LineTester();
-  const uid = `U${crypto.randomUUID()}`;
+  const uid = tester.generateUserId();
   const sentMessages = await tester.sendMessages(uid, [
     { type: "text", text: "Hello, world1" },
     { type: "text", text: "Hello, world2" },
@@ -27,6 +27,10 @@ test("sends message", async () => {
 });
 
 class LineTester {
+  generateUserId() {
+    return `U${crypto.randomUUID().replace(/-/g, "")}`;
+  }
+
   async sendMessages(
     to: string,
     messages: Array<{ type: string; text: string }>

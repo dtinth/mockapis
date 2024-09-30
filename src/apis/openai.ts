@@ -40,10 +40,9 @@ const elysia = new Elysia({
     async ({ body }) => {
       const { messages } = body;
       const lastMessage = messages[messages.length - 1].content;
-      const meowMessage = lastMessage
-        .split(" ")
-        .map(() => "meow")
-        .join(" ");
+      const meowMessage = lastMessage.replace(/\w+/g, (a) =>
+        a.toLowerCase() === a ? "meow" : a.toUpperCase() === a ? "MEOW" : "Meow"
+      );
       return {
         id: `${Date.now()}`,
         object: "chat.completion",
@@ -60,9 +59,9 @@ const elysia = new Elysia({
           },
         ],
         usage: {
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0,
+          prompt_tokens: lastMessage.length,
+          completion_tokens: meowMessage.length,
+          total_tokens: lastMessage.length + meowMessage.length,
         },
       };
     },

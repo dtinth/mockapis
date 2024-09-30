@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { api, type paths } from "./api";
+import { api, type paths } from "./test-utils";
 
 test("get event info", async () => {
   const tester = new KioTester();
