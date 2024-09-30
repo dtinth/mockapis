@@ -1,11 +1,11 @@
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia, type AnyElysia } from "elysia";
-import { kio } from "./apis/dtinth/kio";
-import { line } from "./apis/line/line";
-import { openaiChat } from "./apis/openai/chat";
-import { vonage } from "./apis/vonage/sms";
-import { getEvents } from "./eventLog";
+import { dtinthKio } from "./apis/dtinth-kio";
+import { line } from "./apis/line";
+import { openai } from "./apis/openai";
+import { vonage } from "./apis/vonage";
+import { getEvents } from "./EventStore";
 
 let apiDescription = `**A collection of mock API endpoints of various services,** designed to facilitate end-to-end testing development.
 This project provides a set of simulated APIs that mimic the real services, allowing developers to test their applications without relying on actual external services.
@@ -67,7 +67,7 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const apis = [openaiChat, line, kio, vonage] as const;
+const apis = [openai, line, dtinthKio, vonage] as const;
 
 const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
 
@@ -129,4 +129,4 @@ const app = applyApis(
 
 export type App = typeof app;
 
-console.log(`Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
+console.log(`http://${app.server?.hostname}:${app.server?.port}`);

@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { defineApi } from "../../defineApi";
+import { defineApi } from "../defineApi";
 
 const elysia = new Elysia({
   prefix: "/openai",
@@ -101,7 +101,7 @@ const elysia = new Elysia({
     }
   );
 
-export const openaiChat = defineApi({
+export const openai = defineApi({
   tag: "OpenAI",
   description:
     "A mock API that implements a subset of the [OpenAI API](https://beta.openai.com/docs/api-reference/chat).",

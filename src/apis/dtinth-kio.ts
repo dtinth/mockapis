@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
-import { defineApi } from "../../defineApi";
-import { defineEvents, EventLog } from "../../eventLog";
+import { defineApi } from "../defineApi";
+import { EventStore, View } from "../EventStore";
 
-const events = defineEvents<{
+interface Events {
   register: {
     ticketTypeId: number;
     firstname: string;
@@ -15,7 +15,7 @@ const events = defineEvents<{
   undoCheckIn: {
     referenceCode: string;
   };
-}>();
+}
 
 interface Ticket {
   id: number;
@@ -30,7 +30,7 @@ interface TicketType {
   name: string;
 }
 
-class EventState {
+class EventView extends View<Events> {
   tickets = new Map<number, Ticket>();
   referenceCodeMap = new Map<string, number>();
   checkedInIds = new Map<number, number>();
@@ -39,8 +39,8 @@ class EventState {
     { id: 10002, name: "VIP" },
   ] as TicketType[];
 
-  handleEvent = events.createEventHandler((event) => {
-    if (event.type === "register") {
+  handleEvent = this.createEventHandler({
+    register: (event) => {
       const { ticketTypeId, firstname, lastname, referenceCode } =
         event.payload;
       const ticket: Ticket = {
@@ -52,7 +52,8 @@ class EventState {
       };
       this.tickets.set(ticket.id, ticket);
       this.referenceCodeMap.set(referenceCode, ticket.id);
-    } else if (event.type === "checkIn") {
+    },
+    checkIn: (event) => {
       const { referenceCode } = event.payload;
       const ticket = this.tickets.get(
         this.referenceCodeMap.get(referenceCode)!
@@ -60,7 +61,8 @@ class EventState {
       if (ticket) {
         this.checkedInIds.set(ticket.id, event.timestamp);
       }
-    } else if (event.type === "undoCheckIn") {
+    },
+    undoCheckIn: (event) => {
       const { referenceCode } = event.payload;
       const ticket = this.tickets.get(
         this.referenceCodeMap.get(referenceCode)!
@@ -68,7 +70,7 @@ class EventState {
       if (ticket) {
         this.checkedInIds.delete(ticket.id);
       }
-    }
+    },
   });
 }
 
@@ -87,20 +89,15 @@ const elysia = new Elysia({
     .derive(({ params, set }) => {
       const topic = `dtinth/kio:${params["eventId"]}`;
       set.headers["x-mockapis-topic"] = topic;
-      const eventLog = new EventLog(topic, events);
-      const getState = async () => {
-        const events = await eventLog.get();
-        const state = new EventState();
-        for (const event of events) state.handleEvent(event);
-        return state;
-      };
-      return { eventLog, getState };
+      const eventStore = new EventStore<Events>(topic);
+      const getView = () => new EventView().loadFrom(eventStore);
+      return { eventStore, getView };
     })
     .post(
       "/_test/register",
-      async ({ body, set, getState, eventLog }) => {
-        const state = await getState();
-        if (!state.ticketTypes.some((type) => type.id === body.ticketTypeId)) {
+      async ({ body, set, getView, eventStore: eventLog }) => {
+        const view = await getView();
+        if (!view.ticketTypes.some((type) => type.id === body.ticketTypeId)) {
           set.status = "Bad Request";
           return { ok: false, error: "Invalid ticket type" };
         }
@@ -121,13 +118,13 @@ const elysia = new Elysia({
     )
     .get(
       "/info",
-      async ({ getState }) => {
-        const state = await getState();
+      async ({ getView }) => {
+        const view = await getView();
         return {
           eventTitle: "test event",
-          checkedIn: state.checkedInIds.size,
-          total: state.tickets.size,
-          ticketTypes: state.ticketTypes,
+          checkedIn: view.checkedInIds.size,
+          total: view.tickets.size,
+          ticketTypes: view.ticketTypes,
         };
       },
       {
@@ -147,29 +144,31 @@ const elysia = new Elysia({
     )
     .post(
       "/checkIn",
-      async ({ body, getState, eventLog }) => {
+      async ({ body, getView, eventStore: eventLog }) => {
         const { refCode } = body as { refCode: string };
-        const state = await getState();
-        const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
+        const view = await getView();
+        const ticket = view.tickets.get(view.referenceCodeMap.get(refCode)!);
         if (!ticket) {
           return {
-            checkedIn: state.checkedInIds.size,
+            checkedIn: view.checkedInIds.size,
             checkedInTickets: [],
             usedTickets: [],
           };
         }
-        if (state.checkedInIds.has(ticket.id)) {
+        if (view.checkedInIds.has(ticket.id)) {
           return {
-            checkedIn: state.checkedInIds.size,
+            checkedIn: view.checkedInIds.size,
             checkedInTickets: [],
             usedTickets: [ticket],
           };
         }
-        await eventLog.add("checkIn", {
-          referenceCode: refCode,
-        });
+        view.handleEvent(
+          await eventLog.add("checkIn", {
+            referenceCode: refCode,
+          })
+        );
         return {
-          checkedIn: state.checkedInIds.size + 1,
+          checkedIn: view.checkedInIds.size,
           checkedInTickets: [ticket],
           usedTickets: [],
         };
@@ -188,27 +187,29 @@ const elysia = new Elysia({
     )
     .post(
       "/checkOut",
-      async ({ body, getState, eventLog }) => {
+      async ({ body, getView, eventStore: eventLog }) => {
         const { refCode } = body as { refCode: string };
-        const state = await getState();
-        const ticket = state.tickets.get(state.referenceCodeMap.get(refCode)!);
+        const view = await getView();
+        const ticket = view.tickets.get(view.referenceCodeMap.get(refCode)!);
         if (!ticket) {
           return {
-            checkedIn: state.checkedInIds.size,
+            checkedIn: view.checkedInIds.size,
             undoneTickets: [],
           };
         }
-        if (!state.checkedInIds.has(ticket.id)) {
+        if (!view.checkedInIds.has(ticket.id)) {
           return {
-            checkedIn: state.checkedInIds.size,
+            checkedIn: view.checkedInIds.size,
             undoneTickets: [],
           };
         }
-        await eventLog.add("undoCheckIn", {
-          referenceCode: refCode,
-        });
+        view.handleEvent(
+          await eventLog.add("undoCheckIn", {
+            referenceCode: refCode,
+          })
+        );
         return {
-          checkedIn: state.checkedInIds.size - 1,
+          checkedIn: view.checkedInIds.size,
           undoneTickets: [ticket],
         };
       },
@@ -225,10 +226,10 @@ const elysia = new Elysia({
     )
     .get(
       "/_test/tickets",
-      async ({ getState }) => {
-        const state = await getState();
-        return Array.from(state.tickets.values(), (ticket) => {
-          const usedAt = state.checkedInIds.get(ticket.id);
+      async ({ getView }) => {
+        const view = await getView();
+        return Array.from(view.tickets.values(), (ticket) => {
+          const usedAt = view.checkedInIds.get(ticket.id);
           return {
             ticketInfo: ticket,
             referenceCode: ticket.referenceCode,
@@ -249,7 +250,7 @@ const elysia = new Elysia({
     )
 );
 
-export const kio = defineApi({
+export const dtinthKio = defineApi({
   tag: "dtinth/kio",
   description:
     "A mock API that implements the endpoints expected by [dtinth/kio](https://github.com/dtinth/kio), a geeky self-checkin kiosk.",

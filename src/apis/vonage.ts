@@ -1,27 +1,31 @@
 import { Elysia, t } from "elysia";
-import { defineApi } from "../../defineApi";
-import { defineEvents, EventLog } from "../../eventLog";
+import { defineApi } from "../defineApi";
+import { EventStore } from "../EventStore";
 
-const events = defineEvents<{
+interface Events {
   sms: {
     to: string;
     from: string;
     text: string;
   };
-}>();
+}
+
+function getEventStore(phone: string) {
+  return new EventStore<Events>(`vonage:${phone}`);
+}
 
 const elysia = new Elysia({ prefix: "/vonage", tags: ["Vonage"] })
   .post(
     "/sms/json",
     async ({ body, set }) => {
       const { to, from, text } = body;
-      const eventLog = new EventLog(`vonage:${to}`, events);
+      const eventStore = getEventStore(to);
       const topic = `vonage:${to}`;
       set.headers["x-mockapis-topic"] = topic;
 
       const messageId = Math.random().toString(36).substring(2, 15);
 
-      await eventLog.add("sms", { to, from, text });
+      await eventStore.add("sms", { to, from, text });
 
       return {
         "message-count": "1",
@@ -64,8 +68,7 @@ const elysia = new Elysia({ prefix: "/vonage", tags: ["Vonage"] })
   .get(
     "/_test/messages",
     async ({ query }) => {
-      const topic = `vonage:${query.to}`;
-      const eventLog = new EventLog(topic, events);
+      const eventLog = getEventStore(query.to);
       return (await eventLog.get())
         .filter((e) => e.type === "sms")
         .map((e) => e.payload);

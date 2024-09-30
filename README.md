@@ -56,3 +56,97 @@ To run the test suite, first run the dev server, and then run the following comm
 bun generate:types  # Generate types from OpenAPI specs
 bun test            # Run the tests
 ```
+
+## Architecture Overview
+
+The Mock APIs project is built using [Elysia](https://elysiajs.com/), a TypeScript web framework, and uses Redis as an event store. The architecture is designed to be modular and easily extensible.
+
+Key components:
+
+- Elysia for API routing and handling
+- Redis for storing events
+- `EventStore` and `View` utilities for managing state
+- [openapi-typescript](https://openapi-ts.dev/cli) for generating TypeScript types from OpenAPI specs for testing
+- Tester pattern for writing tests
+
+## Adding New APIs
+
+To add a new API:
+
+1. Create a new file in the `src/apis` directory (e.g., `newapi.ts`).
+2. Define your API using Elysia, including routes and handlers. See existing APIs for examples.
+3. Use the `defineApi` function to export your API:
+4. Import and add your new API to the `apis` array in `src/index.ts`.
+
+## Using EventStore and View
+
+The `EventStore` and `View` utilities help manage state:
+
+- `EventStore`: Handles storing and retrieving events from Redis.
+- `View`: Helps build a state representation from events.
+
+Example usage:
+
+```typescript
+interface Events {
+  someEvent: { data: string };
+}
+
+class MyView extends View<Events> {
+  someState: string = "";
+
+  handleEvent = this.createEventHandler({
+    someEvent: (event) => {
+      this.someState = event.payload.data;
+    },
+  });
+}
+
+// In your API handler:
+const eventStore = new EventStore<Events>("my-topic");
+const view = new MyView().loadFrom(eventStore);
+```
+
+## Adding Tests
+
+Tests are written using Bun's test runner. To add tests for a new API:
+
+1. Create a new test file in the `tests` directory (e.g., `newapi.test.ts`).
+2. Use the tester pattern to create a class that encapsulates API calls.
+3. Write tests using the tester class to interact with your API.
+
+## Tester Pattern
+
+The tester pattern involves creating a class that wraps API calls and provides methods for interacting with your API. This approach:
+
+- Encapsulates API interaction logic
+- Generates unique identifiers for each test run to keep state isolated
+- Makes tests more readable and maintainable
+- Allows for easy reuse of common API interactions across multiple tests
+
+Example:
+
+```typescript
+test("my api test", async () => {
+  const tester = new MyApiTester();
+  await tester.doSomething("test");
+  const state = await tester.getInfo();
+  expect(state).toMatchObject({
+    /* expected state */
+  });
+});
+
+class MyApiTester {
+  async doSomething(param: string) {
+    const { data } = await api.POST("/my/api/endpoint", {
+      body: { param },
+    });
+    return data;
+  }
+
+  async getInfo() {
+    const { data } = await api.GET("/my/api/info");
+    return data;
+  }
+}
+```

@@ -1,15 +1,19 @@
 import { Elysia, t } from "elysia";
-import { defineApi } from "../../defineApi";
-import { defineEvents, EventLog } from "../../eventLog";
+import { defineApi } from "../defineApi";
+import { EventStore } from "../EventStore";
 
-const events = defineEvents<{
+interface Events {
   push: {
     body: {
       messages: any[];
     };
     sentMessages: { id: string; quoteToken: string }[];
   };
-}>();
+}
+
+function getEventStore(userId: string) {
+  return new EventStore<Events>(`line:${userId}`);
+}
 
 const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
   .post(
@@ -20,10 +24,10 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         id: `${Date.now()}${index}`,
         quoteToken: Math.random().toString(36).substring(2, 15),
       }));
-      const eventLog = new EventLog(`line:${body.to}`, events);
+      const eventStore = getEventStore(body.to);
       const topic = `line:${body.to}`;
       set.headers["x-mockapis-topic"] = topic;
-      await eventLog.add("push", { body, sentMessages });
+      await eventStore.add("push", { body, sentMessages });
       return {
         sentMessages,
       };
@@ -49,9 +53,8 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
   .get(
     "/_test/messages",
     async ({ query }) => {
-      const topic = `line:${query.uid}`;
-      const eventLog = new EventLog(topic, events);
-      return (await eventLog.get())
+      const eventStore = getEventStore(query.uid);
+      return (await eventStore.get())
         .filter((e) => e.type === "push")
         .map((event) => {
           const { body, sentMessages } = event.payload;

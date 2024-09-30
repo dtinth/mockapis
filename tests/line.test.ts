@@ -2,22 +2,17 @@ import { expect, test } from "bun:test";
 import { api } from "./api";
 
 test("sends message", async () => {
-  const uid = crypto.randomUUID();
-  const res = await api.POST("/line/v2/bot/message/push", {
-    body: {
-      to: uid,
-      messages: [
-        { type: "text", text: "Hello, world1" },
-        { type: "text", text: "Hello, world2" },
-      ],
-    },
-  });
-  expect(res.data?.sentMessages).toEqual(expect.any(Array));
+  const tester = new LineTester();
+  const uid = `U${crypto.randomUUID()}`;
+  const sentMessages = await tester.sendMessages(uid, [
+    { type: "text", text: "Hello, world1" },
+    { type: "text", text: "Hello, world2" },
+  ]);
 
-  const messages = await api.GET("/line/_test/messages", {
-    params: { query: { uid } },
-  });
-  expect(messages.data).toEqual([
+  expect(sentMessages).toEqual(expect.any(Array));
+
+  const receivedMessages = await tester.getReceivedMessages(uid);
+  expect(receivedMessages).toEqual([
     [
       {
         id: expect.any(String),
@@ -30,3 +25,25 @@ test("sends message", async () => {
     ],
   ]);
 });
+
+class LineTester {
+  async sendMessages(
+    to: string,
+    messages: Array<{ type: string; text: string }>
+  ) {
+    const { data } = await api.POST("/line/v2/bot/message/push", {
+      body: {
+        to,
+        messages: messages,
+      },
+    });
+    return data?.sentMessages;
+  }
+
+  async getReceivedMessages(uid: string) {
+    const { data } = await api.GET("/line/_test/messages", {
+      params: { query: { uid } },
+    });
+    return data;
+  }
+}
