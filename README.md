@@ -47,6 +47,7 @@ We welcome contributions to expand and improve the Mock APIs project! Here are s
 2. Improve existing API simulations
 3. Enhance documentation
 4. Fix bugs or improve performance
+5. Improve test coverage
 
 ## Running Tests
 
