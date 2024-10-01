@@ -8,8 +8,11 @@
   "dependencies": {
     "@elysiajs/cors": "^1.1.1",
     "@elysiajs/swagger": "^1.1.1",
+    "@thai/html": "npm:@jsr/thai__html",
     "elysia": "latest",
     "ioredis": "^5.4.1",
+    "jose": "^5.9.3",
+    "ofetch": "^1.4.0",
     "openapi-fetch": "^0.12.2",
     "openapi-typescript": "^7.4.1",
     "uuidv7": "^1.0.2"

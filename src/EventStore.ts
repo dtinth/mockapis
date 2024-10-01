@@ -2,23 +2,27 @@ import Redis from "ioredis";
 
 const redis = new Redis(Bun.env["REDIS_URL"]!);
 
-function sanitizeTopic(topic: string): string {
-  return encodeURIComponent(topic).slice(0, 100);
+function getKey(topic: string): string {
+  const sanitizedTopic = encodeURIComponent(topic).slice(0, 100);
+  return `mockapis:events:${sanitizedTopic}`;
 }
 
 export async function addEvent(topic: string, type: string, payload: any) {
-  const sanitizedTopic = sanitizeTopic(topic);
+  const key = getKey(topic);
+  const memoryUsage = await redis.memory("USAGE", key);
   const eventObject = { type, payload, timestamp: Date.now() };
   const eventData = JSON.stringify(eventObject);
-  await redis.rpush(`mockapis:events:${sanitizedTopic}`, eventData);
+  const maxKeySize = 0 * 1024;
+  if ((memoryUsage || 0) + Buffer.byteLength(eventData) > maxKeySize) {
+    throw new Error(`Event store for topic "${topic}" is full.`);
+  }
+  await redis.rpush(key, eventData);
   return eventObject;
 }
 
 export async function getEvents(topic: string) {
-  const sanitizedTopic = sanitizeTopic(topic);
-  return (await redis.lrange(`mockapis:events:${sanitizedTopic}`, 0, -1)).map(
-    (event) => JSON.parse(event)
-  );
+  const key = getKey(topic);
+  return (await redis.lrange(key, 0, -1)).map((event) => JSON.parse(event));
 }
 
 type EventPayloadMapping = Record<string, any>;

@@ -3,9 +3,9 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia, type AnyElysia } from "elysia";
 import { dtinthKio } from "./apis/dtinth-kio";
 import { line } from "./apis/line";
+import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
 import { vonage } from "./apis/vonage";
-import { getEvents } from "./EventStore";
 
 let apiDescription = `**A collection of mock API endpoints of various services,** designed to facilitate end-to-end testing development.
 This project provides a set of simulated APIs that mimic the real services, allowing developers to test their applications without relying on actual external services.
@@ -67,7 +67,7 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const apis = [openai, line, dtinthKio, vonage] as const;
+const apis = [oauth, openai, line, dtinthKio, vonage] as const;
 
 const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
 
@@ -79,41 +79,23 @@ function applyApis<E extends AnyElysia>(elysia: E) {
 }
 
 const app = applyApis(
-  new Elysia()
-    .use(cors())
-    .use(
-      swagger({
-        documentation: {
-          info: {
-            title: "Mock APIs",
-            description: apiDescription,
-            version: "0.0.0",
-          },
-          tags: [
-            {
-              name: "Introspection",
-              description: "Provides access to raw data in the event log.",
-            },
-            ...apis.map((api) => ({
-              name: api.tag,
-              description: api.description,
-            })),
-          ],
+  new Elysia().use(cors()).use(
+    swagger({
+      documentation: {
+        info: {
+          title: "Mock APIs",
+          description: apiDescription,
+          version: "0.0.0",
         },
-      })
-    )
-    .get(
-      "/_test/events/:topic",
-      async ({ params }) => {
-        return getEvents(params.topic);
+        tags: [
+          ...apis.map((api) => ({
+            name: api.tag,
+            description: api.description,
+          })),
+        ],
       },
-      {
-        detail: {
-          summary: "Get events",
-          tags: ["Introspection"],
-        },
-      }
-    )
+    })
+  )
 )
   .get(
     "/",
