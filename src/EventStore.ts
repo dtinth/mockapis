@@ -12,9 +12,9 @@ export async function addEvent(topic: string, type: string, payload: any) {
   const memoryUsage = await redis.memory("USAGE", key);
   const eventObject = { type, payload, timestamp: Date.now() };
   const eventData = JSON.stringify(eventObject);
-  const maxKeySize = 0 * 1024;
+  const maxKeySize = 16 * 1024;
   if ((memoryUsage || 0) + Buffer.byteLength(eventData) > maxKeySize) {
-    throw new Error(`Event store for topic "${topic}" is full.`);
+    await redis.del(key);
   }
   await redis.rpush(key, eventData);
   return eventObject;
