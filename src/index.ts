@@ -67,7 +67,14 @@ Feel free to use it, but keep in mind that (1) there is no uptime or reliability
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
-const apis = [oauth, openai, line, dtinthKio, vonage] as const;
+const apis = [
+  // Add new APIs here
+  oauth,
+  openai,
+  line,
+  vonage,
+  dtinthKio,
+] as const;
 
 const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
 
