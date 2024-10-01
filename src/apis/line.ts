@@ -82,7 +82,6 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
 
 export const line = defineApi({
   tag: "LINE",
-  description:
-    "A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/).",
+  description: `A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/).`,
   elysia,
 });

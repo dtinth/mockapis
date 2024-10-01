@@ -141,7 +141,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
             <h1>Authorize</h1>
             <form id="authorizeForm">
               <p>
-                <label for="claims">Claims:</label><br />
+                <label for="claims">User info:</label><br />
                 <textarea
                   id="claims"
                   name="claims"
@@ -266,6 +266,12 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
 
 export const oauth = defineApi({
   tag: "OAuth 2.0 / OIDC",
-  description: `A mock OAuth 2.0 and OpenID Connect provider API. The API endpoints are designed to mimic [Keycloak](https://www.keycloak.org/)’s paths.`,
+  description: `A mock OAuth 2.0 and OpenID Connect provider API that lets users authenticate as anyone they wish.
+
+- The API endpoints are designed to mimic [Keycloak](https://www.keycloak.org/)’s paths.
+- The authorize page lets user freely fill in any information, such as \`name\`, \`email\`, \`sub\`.
+- This API supports both “Authorization Code Flow” and “Implicit Flow with OIDC” (not to be confused with the traditional “Implicit Flow”, which is not supported).
+- For OIDC, the discovery endpoint is available at [\`/oauth/.well-known/openid-configuration\`](/oauth/.well-known/openid-configuration)
+`,
   elysia,
 });
