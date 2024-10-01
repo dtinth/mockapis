@@ -9,6 +9,21 @@ The service provides **mock endpoints** and **test endpoints.**
 
 Contributions for more APIs are welcome!
 
+## API list
+
+<!-- begin api list -->
+
+<!-- prettier-ignore -->
+| API | Description |
+| --- | --- |
+| [**OAuth 2.0 / OIDC**](https://mockapis.onrender.com/swagger#tag/oauth-20--oidc) | A mock OAuth 2.0 and OpenID Connect provider API that lets users authenticate as anyone they wish. |
+| [**OpenAI**](https://mockapis.onrender.com/swagger#tag/openai) | A mock API that implements a subset of the [OpenAI API](https://beta.openai.com/docs/api-reference/chat). |
+| [**LINE**](https://mockapis.onrender.com/swagger#tag/line) | A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/). |
+| [**Vonage**](https://mockapis.onrender.com/swagger#tag/vonage) | A mock API that implements a subset of the [Vonage SMS API](https://developer.vonage.com/en/api/sms) for sending SMS messages. |
+| [**dtinth/kio**](https://mockapis.onrender.com/swagger#tag/dtinthkio) | A mock API that implements the endpoints expected by [dtinth/kio](https://github.com/dtinth/kio), a geeky self-checkin kiosk. |
+
+<!-- end api list -->
+
 ## Example use case
 
 Imagine you are developing an application that sends SMS messages through an SMS API provider, and you want to write end-to-end tests your app that verifies the SMS functionality. You can:
