@@ -14,7 +14,7 @@ Contributions for more APIs are welcome!
 <!-- begin api list -->
 
 <!-- prettier-ignore -->
-| API | Description |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;API&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Description |
 | --- | --- |
 | [**OAuth 2.0 / OIDC**](https://mockapis.onrender.com/swagger#tag/oauth-20--oidc) | A mock OAuth 2.0 and OpenID Connect provider API that lets users authenticate as anyone they wish. |
 | [**OpenAI**](https://mockapis.onrender.com/swagger#tag/openai) | A mock API that implements a subset of the [OpenAI API](https://beta.openai.com/docs/api-reference/chat). |
