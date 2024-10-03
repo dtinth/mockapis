@@ -3,7 +3,8 @@
   "version": "1.0.50",
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "generate:types": "openapi-typescript http://localhost:46982/swagger/json -o src/apis/test-utils/api.generated.d.ts"
+    "generate:types": "openapi-typescript http://localhost:46982/swagger/json -o src/apis/test-utils/api.generated.d.ts",
+    "generate:readme": "bun src/scripts/update-readme.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.1.1",
