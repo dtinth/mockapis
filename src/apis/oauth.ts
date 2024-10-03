@@ -27,7 +27,7 @@ const loadPublicKey = async () => {
   return publicKeyObject;
 };
 
-export const generateBearerToken = async (payload: jose.JWTPayload) => {
+export const generateIdToken = async (payload: jose.JWTPayload) => {
   const key = await loadPrivateKey();
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "RS256", kid: "mock" })
@@ -36,7 +36,7 @@ export const generateBearerToken = async (payload: jose.JWTPayload) => {
     .sign(key);
 };
 
-export async function verifyToken(jwt: string) {
+export async function verifyIdToken(jwt: string) {
   const key = await loadPublicKey();
   const { payload } = await jose.jwtVerify(jwt, key, {
     algorithms: ["RS256"],
@@ -64,6 +64,17 @@ export function decodeAuthorizationCode(code: string) {
     throw new Error("Invalid authorization code");
   }
   return JSON.parse(Buffer.from(code.slice(3), "base64").toString("utf-8"));
+}
+
+export function generateAccessToken(payload: jose.JWTPayload) {
+  return "at_" + Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+export function decodeAccessToken(token: string) {
+  if (!token.startsWith("at_")) {
+    throw new Error("Invalid access token");
+  }
+  return JSON.parse(Buffer.from(token.slice(3), "base64").toString("utf-8"));
 }
 
 const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
@@ -105,13 +116,12 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
     "/protocol/openid-connect/token",
     async ({ body }) => {
       const { code } = body;
-      const payload = decodeAuthorizationCode(code);
-      const token = await generateBearerToken(payload);
+      const claims = decodeAuthorizationCode(code);
       return {
-        access_token: token,
+        access_token: generateAccessToken(claims),
         token_type: "Bearer",
         expires_in: 3600,
-        id_token: token,
+        id_token: await generateIdToken(claims),
       };
     },
     {
@@ -137,9 +147,8 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return { error: "invalid_token" };
       }
-
       const token = authHeader.split(" ")[1];
-      return verifyToken(token) as any;
+      return decodeAccessToken(token) as any;
     },
     {
       response: t.Object(
@@ -257,7 +266,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
 
       const params = new URLSearchParams();
       if (responseType === "id_token") {
-        params.set("id_token", await generateBearerToken(body.claims));
+        params.set("id_token", await generateIdToken(body.claims));
       } else {
         params.set("code", generateAuthorizationCode(body.claims));
       }
@@ -312,10 +321,9 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
     "/_test/token",
     async ({ body }) => {
       const { claims } = body;
-      const token = await generateBearerToken(claims);
       return {
-        access_token: token,
-        id_token: token,
+        access_token: generateAccessToken(claims),
+        id_token: await generateIdToken(claims),
         refresh_token: generateRefreshToken(claims),
       };
     },
@@ -340,7 +348,15 @@ export const oauth = defineApi({
 - The API endpoints are designed to mimic [Keycloak](https://www.keycloak.org/)’s paths.
 - The authorize page lets user freely fill in any information, such as \`name\`, \`email\`, \`sub\`.
 - This API supports both “Authorization Code Flow” and “Implicit Flow with OIDC” (not to be confused with the traditional “Implicit Flow”, which is not supported).
-- For OIDC, the discovery endpoint is available at [\`/oauth/.well-known/openid-configuration\`](/oauth/.well-known/openid-configuration)
+- For OIDC, the discovery endpoint is available at [\`/oauth/.well-known/openid-configuration\`](/oauth/.well-known/openid-configuration).
+
+This authentication system is shared across all APIs in the mock API server. The following concepts are used:
+
+- **Claims:** Claims are arbitrary data represented in the ID tokens, stored as key-value pairs. Common claims include \`sub\` (user ID), \`name\`, and \`email\`.
+- **Authorization Code:** A code that is normally generated when the user authorizes an application. This code is exchanged for an access token. In the mock APIs, you can generate an authorization code with arbitrary claims using the \`/oauth/_test/code\` endpoint.
+- **ID Token:** A JWT token that contains user information. In the mock APIs, you can generate an ID token with arbitrary claims using the \`/oauth/_test/token\` endpoint.
+- **Access Token:** An opaque token that is used to authenticate requests to the API endpoints. In the mock APIs, you can generate an access token with arbitrary claims using the \`/oauth/_test/token\` endpoint. You can check what data is stored in the token by calling the \`/oauth/protocol/openid-connect/userinfo\` endpoint.
+- **Refresh Token:** A token that can be used to obtain a new access token.
 `,
   elysia,
 });

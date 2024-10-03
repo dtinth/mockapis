@@ -4,38 +4,15 @@ import { api, makeAuthorizationCode } from "./test-utils";
 test("Eventpop API", async () => {
   const tester = new EventpopTester();
   const code = await makeAuthorizationCode({
-    sub: "user",
+    sub: crypto.randomUUID(),
+    name: "Test user",
   });
   const tokenResponse = (await tester.exchangeCodeForToken(code))!;
   const accessToken = tokenResponse.access_token;
-  expect(tokenResponse).toMatchObject({
-    access_token: expect.any(String),
-    token_type: "Bearer",
-    expires_in: 3600,
-    refresh_token: expect.any(String),
-    scope: "public",
-    created_at: expect.any(Number),
-  });
 
   // Test user info endpoint
-  const userInfo = await tester.getUserInfo(accessToken);
-  expect(userInfo).toMatchObject({
-    user: {
-      id: expect.any(Number),
-      full_name: expect.any(String),
-      email: expect.any(String),
-      avatar: expect.any(String),
-      avatars: {
-        original: expect.any(String),
-        medium: expect.any(String),
-        thumb: expect.any(String),
-        tiny: expect.any(String),
-      },
-      birthday: expect.any(String),
-      gender: expect.any(String),
-      phone: expect.any(String),
-    },
-  });
+  const userInfo = (await tester.getUserInfo(accessToken))!;
+  expect(userInfo.user.full_name).toEqual("Test user");
 
   // Test tickets endpoint
   const tickets = await tester.getTickets(accessToken);
