@@ -27,7 +27,7 @@ const loadPublicKey = async () => {
   return publicKeyObject;
 };
 
-const generateToken = async (payload: jose.JWTPayload) => {
+export const generateToken = async (payload: jose.JWTPayload) => {
   const key = await loadPrivateKey();
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "RS256", kid: "mock" })
@@ -35,6 +35,22 @@ const generateToken = async (payload: jose.JWTPayload) => {
     .setExpirationTime("1h")
     .sign(key);
 };
+
+export async function verifyToken(jwt: string) {
+  const key = await loadPublicKey();
+  const { payload } = await jose.jwtVerify(jwt, key, {
+    algorithms: ["RS256"],
+  });
+  return payload;
+}
+
+export function generateRefreshToken(payload: jose.JWTPayload) {
+  return Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+export function decodeRefreshToken(token: string) {
+  return JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+}
 
 const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
@@ -107,11 +123,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       }
 
       const token = authHeader.split(" ")[1];
-      const key = await loadPublicKey();
-      const { payload } = await jose.jwtVerify(token, key, {
-        algorithms: ["RS256"],
-      });
-      return payload as any;
+      return verifyToken(token) as any;
     },
     {
       response: t.Object(

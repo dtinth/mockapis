@@ -50,7 +50,9 @@ it is designed for short-term storage only. After a while, the data will be dele
 
 # Authentication
 
-The mock APIs do not require authentication. You can still provide an Authorization header with any value, but it will be ignored.
+For most endpoints, the mock APIs do not require authentication. You can still provide an Authorization header with any value, but it will be ignored.
+
+Some endpoints have a notion of a “current user.” For these endpoints, you can use the provided fake OAuth API to generate an access token to pass to the mock APIs.
 
 # CORS
 

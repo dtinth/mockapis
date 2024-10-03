@@ -1,51 +1,7 @@
 import { Elysia, redirect, t } from "elysia";
 import { defineApi } from "../defineApi";
-
-interface EventpopTicket {
-  id: number;
-  event_id: number;
-  status: string;
-  firstname: string;
-  lastname: string;
-  phone: string;
-  email: string;
-  reference_code: string;
-  ticket_type: {
-    id: number;
-    name: string;
-    /** @example '฿0.00' */
-    price: string;
-    price_satangs: number;
-    kind: "free" | "paid";
-  };
-}
-
-interface EventpopTicketsResponse {
-  success: boolean;
-  tickets: EventpopTicket[];
-  count: number;
-  total: number;
-  page: number;
-  per_page: number;
-}
-
-interface EventpopMeResponse {
-  user: {
-    id: number;
-    full_name: string;
-    email: string;
-    avatar: string;
-    avatars: {
-      original: string;
-      medium: string;
-      thumb: string;
-      tiny: string;
-    };
-    birthday: string;
-    gender: string;
-    phone: string;
-  };
-}
+import { stringToNumber } from "../stringToNumber";
+import { generateRefreshToken, verifyToken } from "./oauth";
 
 const elysia = new Elysia({
   prefix: "/eventpop",
@@ -60,11 +16,12 @@ const elysia = new Elysia({
     "/oauth/token",
     async ({ body }) => {
       const { code } = body;
+      const payload = await verifyToken(code);
       return {
         access_token: code,
         token_type: "Bearer",
         expires_in: 3600,
-        refresh_token: "TODO",
+        refresh_token: generateRefreshToken(payload),
         scope: "public",
         created_at: Math.floor(Date.now() / 1000),
       };
@@ -81,7 +38,7 @@ const elysia = new Elysia({
         scope: t.String(),
         created_at: t.Number(),
       }),
-      detail: { summary: "Exchange authorization code for tokens" },
+      detail: { summary: "Exchange authorization code for token" },
     }
   )
   .group("/api/public", (app) =>
@@ -96,35 +53,92 @@ const elysia = new Elysia({
           accessToken: query["access_token"],
         };
       })
-      .get("/me", async () => {
-        return {
-          user: {
-            id: 1,
-            full_name: "John Doe",
-            email: "john@example.com",
-            avatar: "https://example.com/avatar.jpg",
-            avatars: {
-              original: "https://example.com/avatar.jpg",
-              medium: "https://example.com/avatar.jpg",
-              thumb: "https://example.com/avatar.jpg",
-              tiny: "https://example.com/avatar.jpg",
+      .get(
+        "/me",
+        async ({ accessToken }) => {
+          if (!accessToken) throw new Error("Unauthorized");
+          const payload = await verifyToken(accessToken);
+          const id = stringToNumber(payload.sub || "user");
+          const avatar = `https://api.dicebear.com/9.x/thumbs/svg?seed=${id}`;
+          return {
+            user: {
+              id: stringToNumber(payload.sub || "user"),
+              full_name: String(payload["name"] || "Unknown user"),
+              email: String(payload["email"] || "mock@example.com"),
+              avatar,
+              avatars: {
+                original: avatar,
+                medium: avatar,
+                thumb: avatar,
+                tiny: avatar,
+              },
+              birthday: String(payload["birthday"] || "1990-01-01"),
+              gender: String(payload["gender"] || "unspecified"),
+              phone: String(payload["phone"] || "0000000000"),
             },
-            birthday: "1990-01-01",
-            gender: "male",
-            phone: "0812345678",
-          },
-        } as EventpopMeResponse;
-      })
-      .get("/organizers/:organizerId/tickets", async () => {
-        return {
-          success: true,
-          tickets: [],
-          count: 0,
-          total: 0,
-          page: 1,
-          per_page: 10,
-        } as EventpopTicketsResponse;
-      })
+          };
+        },
+        {
+          response: t.Object({
+            user: t.Object({
+              id: t.Number(),
+              full_name: t.String(),
+              email: t.String(),
+              avatar: t.String(),
+              avatars: t.Object({
+                original: t.String(),
+                medium: t.String(),
+                thumb: t.String(),
+                tiny: t.String(),
+              }),
+              birthday: t.String(),
+              gender: t.String(),
+              phone: t.String(),
+            }),
+          }),
+        }
+      )
+      .get(
+        "/organizers/:organizerId/tickets",
+        async () => {
+          return {
+            success: true,
+            tickets: [],
+            count: 0,
+            total: 0,
+            page: 1,
+            per_page: 10,
+          };
+        },
+        {
+          response: t.Object({
+            success: t.Boolean(),
+            tickets: t.Array(
+              t.Object({
+                id: t.Number(),
+                event_id: t.Number(),
+                status: t.String(),
+                firstname: t.String(),
+                lastname: t.String(),
+                phone: t.String(),
+                email: t.String(),
+                reference_code: t.String(),
+                ticket_type: t.Object({
+                  id: t.Number(),
+                  name: t.String(),
+                  price: t.String(),
+                  price_satangs: t.Number(),
+                  kind: t.String(),
+                }),
+              })
+            ),
+            count: t.Number(),
+            total: t.Number(),
+            page: t.Number(),
+            per_page: t.Number(),
+          }),
+        }
+      )
   );
 
 export const eventpop = defineApi({
