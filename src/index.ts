@@ -2,6 +2,7 @@ import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia, type AnyElysia } from "elysia";
 import { dtinthKio } from "./apis/dtinth-kio";
+import { eventpop } from "./apis/eventpop";
 import { line } from "./apis/line";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
@@ -70,6 +71,7 @@ If you need a more reliable instance, you can [take the source code](https://git
 const apis = [
   // Add new APIs here
   oauth,
+  eventpop,
   openai,
   line,
   vonage,
