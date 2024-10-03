@@ -2,6 +2,8 @@ import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia, type AnyElysia } from "elysia";
 import { dtinthKio } from "./apis/dtinth-kio";
+import { eventpop } from "./apis/eventpop";
+import { github } from "./apis/github";
 import { line } from "./apis/line";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
@@ -49,7 +51,9 @@ it is designed for short-term storage only. After a while, the data will be dele
 
 # Authentication
 
-The mock APIs do not require authentication. You can still provide an Authorization header with any value, but it will be ignored.
+For most endpoints, the mock APIs do not require authentication. You can still provide an Authorization header with any value, but it will be ignored.
+
+Some endpoints have a notion of a “current user.” For these endpoints, you can use the provided fake OAuth API to generate an access token to pass to the mock APIs.
 
 # CORS
 
@@ -70,6 +74,8 @@ If you need a more reliable instance, you can [take the source code](https://git
 const apis = [
   // Add new APIs here
   oauth,
+  eventpop,
+  github,
   openai,
   line,
   vonage,
@@ -86,23 +92,34 @@ function applyApis<E extends AnyElysia>(elysia: E) {
 }
 
 const app = applyApis(
-  new Elysia().use(cors()).use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Mock APIs",
-          description: apiDescription,
-          version: "0.0.0",
-        },
-        tags: [
-          ...apis.map((api) => ({
-            name: api.tag,
-            description: api.description,
-          })),
-        ],
-      },
+  new Elysia()
+    .use(cors())
+    .onAfterResponse((x) => {
+      const { request, error } = x as {
+        request: Request;
+        error?: Error;
+      };
+      if (error instanceof Error) {
+        console.error(`${request.method} ${request.url}:`, error);
+      }
     })
-  )
+    .use(
+      swagger({
+        documentation: {
+          info: {
+            title: "Mock APIs",
+            description: apiDescription,
+            version: "0.0.0",
+          },
+          tags: [
+            ...apis.map((api) => ({
+              name: api.tag,
+              description: api.description,
+            })),
+          ],
+        },
+      })
+    )
 )
   .get(
     "/",
