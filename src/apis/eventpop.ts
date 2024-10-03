@@ -1,7 +1,12 @@
 import { Elysia, redirect, t } from "elysia";
 import { defineApi } from "../defineApi";
 import { stringToNumber } from "../stringToNumber";
-import { generateRefreshToken, verifyToken } from "./oauth";
+import {
+  decodeAuthorizationCode,
+  generateBearerToken,
+  generateRefreshToken,
+  verifyToken,
+} from "./oauth";
 
 const elysia = new Elysia({
   prefix: "/eventpop",
@@ -16,9 +21,10 @@ const elysia = new Elysia({
     "/oauth/token",
     async ({ body }) => {
       const { code } = body;
-      const payload = await verifyToken(code);
+      const payload = decodeAuthorizationCode(code);
+      const token = await generateBearerToken(payload);
       return {
-        access_token: code,
+        access_token: token,
         token_type: "Bearer",
         expires_in: 3600,
         refresh_token: generateRefreshToken(payload),

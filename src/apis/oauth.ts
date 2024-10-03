@@ -27,7 +27,7 @@ const loadPublicKey = async () => {
   return publicKeyObject;
 };
 
-export const generateToken = async (payload: jose.JWTPayload) => {
+export const generateBearerToken = async (payload: jose.JWTPayload) => {
   const key = await loadPrivateKey();
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "RS256", kid: "mock" })
@@ -45,11 +45,25 @@ export async function verifyToken(jwt: string) {
 }
 
 export function generateRefreshToken(payload: jose.JWTPayload) {
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
+  return "rt_" + Buffer.from(JSON.stringify(payload)).toString("base64");
 }
 
 export function decodeRefreshToken(token: string) {
-  return JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+  if (!token.startsWith("rt_")) {
+    throw new Error("Invalid refresh token");
+  }
+  return JSON.parse(Buffer.from(token.slice(3), "base64").toString("utf-8"));
+}
+
+export function generateAuthorizationCode(payload: jose.JWTPayload) {
+  return "ac_" + Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+export function decodeAuthorizationCode(code: string) {
+  if (!code.startsWith("ac_")) {
+    throw new Error("Invalid authorization code");
+  }
+  return JSON.parse(Buffer.from(code.slice(3), "base64").toString("utf-8"));
 }
 
 const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
@@ -91,11 +105,13 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
     "/protocol/openid-connect/token",
     async ({ body }) => {
       const { code } = body;
+      const payload = decodeAuthorizationCode(code);
+      const token = await generateBearerToken(payload);
       return {
-        access_token: code,
+        access_token: token,
         token_type: "Bearer",
         expires_in: 3600,
-        id_token: code,
+        id_token: token,
       };
     },
     {
@@ -236,15 +252,14 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .post(
     "/_test/authorize",
     async ({ body, query }) => {
-      const token = await generateToken(body.claims);
       const responseType = query.response_type;
       const url = new URL(query.redirect_uri);
 
       const params = new URLSearchParams();
       if (responseType === "id_token") {
-        params.set("id_token", token);
+        params.set("id_token", await generateBearerToken(body.claims));
       } else {
-        params.set("code", token);
+        params.set("code", generateAuthorizationCode(body.claims));
       }
       if (query.state != null) {
         params.set("state", query.state);
@@ -274,8 +289,50 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       }),
       detail: { summary: "[Test] Generates the URL to redirect" },
     }
+  )
+  .post(
+    "/_test/code",
+    async ({ body }) => {
+      const { claims } = body;
+      return { code: generateAuthorizationCode(claims) };
+    },
+    {
+      body: t.Object({
+        claims: t.Any(),
+      }),
+      response: t.Object({
+        code: t.String(),
+      }),
+      detail: {
+        summary: "[Test] Generate an authorization code with arbitrary claims",
+      },
+    }
+  )
+  .post(
+    "/_test/token",
+    async ({ body }) => {
+      const { claims } = body;
+      const token = await generateBearerToken(claims);
+      return {
+        access_token: token,
+        id_token: token,
+        refresh_token: generateRefreshToken(claims),
+      };
+    },
+    {
+      body: t.Object({
+        claims: t.Any(),
+      }),
+      response: t.Object({
+        access_token: t.String(),
+        id_token: t.String(),
+        refresh_token: t.String(),
+      }),
+      detail: {
+        summary: "[Test] Generate bearer tokens with arbitrary claims",
+      },
+    }
   );
-
 export const oauth = defineApi({
   tag: "OAuth 2.0 / OIDC",
   description: `A mock OAuth 2.0 and OpenID Connect provider API that lets users authenticate as anyone they wish.

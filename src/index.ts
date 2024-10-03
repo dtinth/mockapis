@@ -90,23 +90,34 @@ function applyApis<E extends AnyElysia>(elysia: E) {
 }
 
 const app = applyApis(
-  new Elysia().use(cors()).use(
-    swagger({
-      documentation: {
-        info: {
-          title: "Mock APIs",
-          description: apiDescription,
-          version: "0.0.0",
-        },
-        tags: [
-          ...apis.map((api) => ({
-            name: api.tag,
-            description: api.description,
-          })),
-        ],
-      },
+  new Elysia()
+    .use(cors())
+    .onAfterResponse((x) => {
+      const { request, error } = x as {
+        request: Request;
+        error?: Error;
+      };
+      if (error instanceof Error) {
+        console.error(`${request.method} ${request.url}:`, error);
+      }
     })
-  )
+    .use(
+      swagger({
+        documentation: {
+          info: {
+            title: "Mock APIs",
+            description: apiDescription,
+            version: "0.0.0",
+          },
+          tags: [
+            ...apis.map((api) => ({
+              name: api.tag,
+              description: api.description,
+            })),
+          ],
+        },
+      })
+    )
 )
   .get(
     "/",
