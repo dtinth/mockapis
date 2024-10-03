@@ -1,17 +1,17 @@
 import { expect, test } from "bun:test";
 import { api, makeAuthorizationCode } from "./test-utils";
 
-test("Eventpop API", async () => {
+test("Eventpop OAuth and get tickets", async () => {
   const tester = new EventpopTester();
   const code = await makeAuthorizationCode({
     sub: crypto.randomUUID(),
     name: "Test user",
   });
-  const tokenResponse = (await tester.exchangeCodeForToken(code))!;
+  const tokenResponse = await tester.exchangeCodeForToken(code);
   const accessToken = tokenResponse.access_token;
 
   // Test user info endpoint
-  const userInfo = (await tester.getUserInfo(accessToken))!;
+  const userInfo = await tester.getUserInfo(accessToken);
   expect(userInfo.user.full_name).toEqual("Test user");
 
   // Test tickets endpoint
@@ -31,14 +31,14 @@ class EventpopTester {
     const { data } = await api.POST("/eventpop/oauth/token", {
       body: { code },
     });
-    return data;
+    return data!;
   }
 
   async getUserInfo(accessToken: string) {
     const { data } = await api.GET("/eventpop/api/public/me", {
       params: { query: { access_token: accessToken } },
     });
-    return data;
+    return data!;
   }
 
   async getTickets(accessToken: string) {
@@ -51,6 +51,6 @@ class EventpopTester {
         },
       }
     );
-    return data;
+    return data!;
   }
 }
