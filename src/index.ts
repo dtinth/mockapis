@@ -3,6 +3,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia, type AnyElysia } from "elysia";
 import { dtinthKio } from "./apis/dtinth-kio";
 import { eventpop } from "./apis/eventpop";
+import { github } from "./apis/github";
 import { line } from "./apis/line";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
@@ -74,6 +75,7 @@ const apis = [
   // Add new APIs here
   oauth,
   eventpop,
+  github,
   openai,
   line,
   vonage,

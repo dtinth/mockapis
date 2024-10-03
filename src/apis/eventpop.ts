@@ -1,5 +1,6 @@
 import { Elysia, redirect, t } from "elysia";
 import { defineApi } from "../defineApi";
+import { generateAvatarUrl } from "../generateAvatarUrl";
 import { stringToNumber } from "../stringToNumber";
 import {
   decodeAccessToken,
@@ -65,7 +66,7 @@ const elysia = new Elysia({
           if (!accessToken) throw new Error("Unauthorized");
           const payload = decodeAccessToken(accessToken);
           const id = stringToNumber(payload.sub || "user");
-          const avatar = `https://api.dicebear.com/9.x/thumbs/svg?seed=${id}`;
+          const avatar = generateAvatarUrl(String(id));
           return {
             user: {
               id: stringToNumber(payload.sub || "user"),
