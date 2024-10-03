@@ -2,10 +2,10 @@ import { Elysia, redirect, t } from "elysia";
 import { defineApi } from "../defineApi";
 import { stringToNumber } from "../stringToNumber";
 import {
+  decodeAccessToken,
   decodeAuthorizationCode,
-  generateIdToken,
+  generateAccessToken,
   generateRefreshToken,
-  verifyIdToken,
 } from "./oauth";
 
 const elysia = new Elysia({
@@ -22,7 +22,7 @@ const elysia = new Elysia({
     async ({ body }) => {
       const { code } = body;
       const payload = decodeAuthorizationCode(code);
-      const token = await generateIdToken(payload);
+      const token = generateAccessToken(payload);
       return {
         access_token: token,
         token_type: "Bearer",
@@ -63,7 +63,7 @@ const elysia = new Elysia({
         "/me",
         async ({ accessToken }) => {
           if (!accessToken) throw new Error("Unauthorized");
-          const payload = await verifyIdToken(accessToken);
+          const payload = decodeAccessToken(accessToken);
           const id = stringToNumber(payload.sub || "user");
           const avatar = `https://api.dicebear.com/9.x/thumbs/svg?seed=${id}`;
           return {
