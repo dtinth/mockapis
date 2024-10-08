@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  redis:
+    image: "redis:latest"
+    container_name: "redis"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+  mockapis:
+    build: .
+    container_name: "mockapis"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    ports:
+      - "46982:46982"
+
+volumes:
+  redis-data:
+    driver: local
