@@ -45,6 +45,78 @@ test("gets chat completion", async () => {
   });
 });
 
+test("gets chat completion (stream)", async () => {
+  const tester = new OpenAITester();
+  const stream = await tester.getChatCompletionStream([
+    { role: "user", content: "Hello, how are you?" },
+  ]);
+
+  expect(stream).toBeDefined();
+  if (!stream) {
+    throw new Error("completion is not readable stream");
+  }
+
+  const completion = [];
+  const reader = stream.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    completion.push(JSON.parse(new TextDecoder().decode(value)));
+  }
+
+  expect(completion.length).toBe(3);
+
+  expect(completion[0]).toMatchObject({
+    id: expect.any(String),
+    object: "chat.completion.chunk",
+    created: expect.any(Number),
+    model: "meowgpt",
+    system_fingerprint: "fp_44709d6fcb",
+    choices: [
+      {
+        index: 0,
+        delta: { role: "assistant", content: "" },
+        logprobs: null,
+        finish_reason: null,
+      },
+    ],
+  });
+
+  expect(completion[1]).toMatchObject({
+    id: expect.any(String),
+    object: "chat.completion.chunk",
+    created: expect.any(Number),
+    model: "meowgpt",
+    system_fingerprint: "fp_44709d6fcb",
+    choices: [
+      {
+        index: 0,
+        delta: { content: "Meow, meow meow meow?" },
+        logprobs: null,
+        finish_reason: null,
+      },
+    ],
+  });
+
+  expect(completion[2]).toMatchObject({
+    id: expect.any(String),
+    object: "chat.completion.chunk",
+    created: expect.any(Number),
+    model: "meowgpt",
+    system_fingerprint: "fp_44709d6fcb",
+    choices: [
+      {
+        index: 0,
+        delta: {},
+        logprobs: null,
+        finish_reason: "stop",
+      },
+    ],
+  });
+});
+
 class OpenAITester {
   async listModels() {
     const { data } = await api.GET("/openai/v1/models");
@@ -57,6 +129,20 @@ class OpenAITester {
         model: "meowgpt",
         messages,
       },
+    });
+    return data;
+  }
+
+  async getChatCompletionStream(
+    messages: Array<{ role: string; content: string }>,
+  ) {
+    const { data } = await api.POST("/openai/v1/chat/completions", {
+      body: {
+        model: "meowgpt",
+        messages,
+        stream: true,
+      },
+      parseAs: "stream",
     });
     return data;
   }
