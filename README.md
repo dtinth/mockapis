@@ -23,6 +23,8 @@ Contributions for more APIs are welcome!
 | [**LINE**](https://mockapis.onrender.com/swagger#tag/line) | A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/). |
 | [**Vonage**](https://mockapis.onrender.com/swagger#tag/vonage) | A mock API that implements a subset of the [Vonage SMS API](https://developer.vonage.com/en/api/sms) for sending SMS messages. |
 | [**dtinth/kio**](https://mockapis.onrender.com/swagger#tag/dtinthkio) | A mock API that implements the endpoints expected by [dtinth/kio](https://github.com/dtinth/kio), a geeky self-checkin kiosk. |
+| [**OpnPayments**](https://mockapis.onrender.com/swagger#tag/opnpayments) | A mock API that implements a subset of the [OpnPayments API](https://docs.opn.ooo) for receiving payments. |
+| [**SMSKUB**](https://mockapis.onrender.com/swagger#tag/smskub) | A mock API that implements a subset of the [SMSKUB API](https://documenter.getpostman.com/view/9887776/VV4xvFoy#6cfa0c23-5f08-4f80-9e62-ffbf10dd75ea) for sending SMS quick messages. |
 
 <!-- end api list -->
 
