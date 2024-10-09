@@ -44,11 +44,41 @@ You can explore the available APIs and their documentation at our demo instance:
 
 ## Running with Docker
 
-We provide a docker-compose configuration for users who would like to run the service locally without any configuration. This is useful if you have limitation connecting to external network during testing.
+### Using Pre-built Image
+
+For quick setup without building from source, you can use the pre-built Docker image. Create a `docker-compose.yml` file with the following content:
+
+```yaml
+services:
+  redis:
+    image: "redis:latest"
+  mockapis:
+    image: ghcr.io/dtinth/mockapis:main
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    ports:
+      - "46982:46982"
+```
+
+Then run:
 
 ```sh
 docker compose up -d
 ```
+
+This will start the Mock APIs service using the latest pre-built image from the GitHub Container Registry.
+
+### Building from Source
+
+If you plan to make changes to the Mock APIs or want to build from source, you can use the `docker-compose.yml` file provided in the repository. Clone the repository and run:
+
+```sh
+docker compose up -d
+```
+
+This will build the Docker image from the source code in the repository and start the service.
 
 ## Features
 
