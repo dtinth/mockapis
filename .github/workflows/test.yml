@@ -9,16 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
-      - run: bun run src/index.ts & bunx wait-on http-get://127.0.0.1:46982/swagger/json
+      - run: docker compose up -d && bunx wait-on http-get://127.0.0.1:46982/swagger/json
       - run: bun run generate:types
       - run: bun test
         env:
