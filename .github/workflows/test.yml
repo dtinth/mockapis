@@ -12,8 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: docker compose up -d && bunx wait-on http-get://127.0.0.1:46982/swagger/json
-      - run: bun run generate:types
+      - name: Start service and Redis
+        run: docker compose up -d && bunx wait-on http-get://127.0.0.1:46982/swagger/json
+      - run: bun install && bun run generate:types
       - run: bun test
         env:
           REDIS_URL: redis://localhost:6379

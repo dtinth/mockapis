@@ -40,6 +40,14 @@ You can explore the available APIs and their documentation at our demo instance:
 
 <https://mockapis.onrender.com/>
 
+## Running with Docker
+
+We provide a docker-compose configuration for users who would like to run the service locally without any configuration. This is useful if you have limitation connecting to external network during testing.
+
+```sh
+docker compose up -d
+```
+
 ## Features
 
 - Multiple mock API endpoints simulating various services without the need for authentication or API keys (any key is accepted)
