@@ -8,6 +8,8 @@ import { line } from "./apis/line";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
 import { vonage } from "./apis/vonage";
+import { opnPayments } from "./apis/opnPayments";
+import { smskub } from "./apis/smskub";
 
 let apiDescription = `**A collection of mock API endpoints of various services,** designed to facilitate end-to-end testing development.
 This project provides a set of simulated APIs that mimic the real services, allowing developers to test their applications without relying on actual external services.
@@ -80,6 +82,8 @@ const apis = [
   line,
   vonage,
   dtinthKio,
+  opnPayments,
+  smskub,
 ] as const;
 
 const sortedApis = [...apis].sort((a, b) => a.tag.localeCompare(b.tag));
