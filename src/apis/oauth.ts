@@ -1,6 +1,7 @@
 import { html, renderHtml } from "@thai/html";
 import { Elysia, t } from "elysia";
 import * as jose from "jose";
+import { generateCodeChallenge, randomCodeVerifier } from "../pkce";
 import { defineApi } from "../defineApi";
 import privateKey from "./oauth.private-key.json";
 import publicKey from "./oauth.public-key.json";
@@ -66,6 +67,17 @@ export function decodeAuthorizationCode(code: string) {
   return JSON.parse(Buffer.from(code.slice(3), "base64").toString("utf-8"));
 }
 
+export function checkCodeVerifier(
+  codeVerifier: string,
+  codeChallenge: string,
+  method: string
+) {
+  if (method === "plain") {
+    return codeVerifier === codeChallenge;
+  }
+  return generateCodeChallenge(codeVerifier) === codeChallenge;
+}
+
 export function generateAccessToken(payload: jose.JWTPayload) {
   return "at_" + Buffer.from(JSON.stringify(payload)).toString("base64");
 }
@@ -115,8 +127,21 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .post(
     "/protocol/openid-connect/token",
     async ({ body }) => {
-      const { code } = body;
+      const { code, code_verifier } = body;
+
       const claims = decodeAuthorizationCode(code);
+      const { key } = claims;
+      if (key) {
+        if (
+          !checkCodeVerifier(
+            code_verifier ?? "",
+            key.code_challenge,
+            key.code_challenge_method
+          )
+        ) {
+          throw new Error("Invalid code verifier");
+        }
+      }
       return {
         access_token: generateAccessToken(claims),
         token_type: "Bearer",
@@ -130,6 +155,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         code: t.String(),
         client_id: t.String(),
         client_secret: t.String(),
+        code_verifier: t.Optional(t.String()),
       }),
       response: t.Object({
         access_token: t.String(),
@@ -255,6 +281,8 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         redirect_uri: t.String(),
         state: t.Optional(t.String()),
         scope: t.Optional(t.String()),
+        code_challenge: t.Optional(t.String()),
+        code_challenge_method: t.Optional(t.String()),
       }),
     }
   )
@@ -268,8 +296,20 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       if (responseType === "id_token") {
         params.set("id_token", await generateIdToken(body.claims));
       } else {
-        params.set("code", generateAuthorizationCode(body.claims));
+        let claims = { ...body.claims };
+        if (query.code_challenge != null) {
+          claims["key"] = {
+            code_challenge: query.code_challenge,
+            code_challenge_method:
+              query.code_challenge_method == null ||
+              query.code_challenge_method == "plain"
+                ? "plain"
+                : "S256",
+          };
+        }
+        params.set("code", generateAuthorizationCode(claims));
       }
+
       if (query.state != null) {
         params.set("state", query.state);
       }
@@ -292,6 +332,8 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         redirect_uri: t.String(),
         state: t.Optional(t.String()),
         scope: t.Optional(t.String()),
+        code_challenge: t.Optional(t.String()),
+        code_challenge_method: t.Optional(t.String()),
       }),
       response: t.Object({
         location: t.String(),
@@ -338,6 +380,29 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       }),
       detail: {
         summary: "[Test] Generate bearer tokens with arbitrary claims",
+      },
+    }
+  )
+  .post(
+    "/_test/pkce_code",
+    async ({ body }) => {
+      const { method, code_length } = body;
+      const codeVerifier = randomCodeVerifier(code_length);
+      const codeChallenge = generateCodeChallenge(codeVerifier, method);
+      return { code_verifier: codeVerifier, code_challenge: codeChallenge };
+    },
+    {
+      body: t.Object({
+        method: t.String(),
+        code_length: t.Number(),
+      }),
+      response: t.Object({
+        code_verifier: t.String(),
+        code_challenge: t.String(),
+      }),
+      detail: {
+        summary:
+          "[Test] Generate Code Verifier and Code Challenge for PKCE OAuth",
       },
     }
   );
