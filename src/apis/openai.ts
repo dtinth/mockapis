@@ -71,8 +71,27 @@ const elysia = new Elysia({
           },
         };
       }
-      const streamResult = [
-        {
+
+      const chunkMeowMessages = meowMessage.split("");
+
+      yield {
+        id: `${Date.now()}`,
+        object: "chat.completion.chunk",
+        created: Date.now(),
+        model: "meowgpt",
+        system_fingerprint: "fp_44709d6fcb",
+        choices: [
+          {
+            index: 0,
+            delta: { role: "assistant", content: "" },
+            logprobs: null,
+            finish_reason: null,
+          },
+        ],
+      };
+      for (const meow of chunkMeowMessages) {
+        await Bun.sleep(1);
+        yield {
           id: `${Date.now()}`,
           object: "chat.completion.chunk",
           created: Date.now(),
@@ -81,42 +100,23 @@ const elysia = new Elysia({
           choices: [
             {
               index: 0,
-              delta: { role: "assistant", content: "" },
+              delta: { content: meow },
               logprobs: null,
               finish_reason: null,
             },
           ],
-        },
-        {
-          id: `${Date.now()}`,
-          object: "chat.completion.chunk",
-          created: Date.now(),
-          model: "meowgpt",
-          system_fingerprint: "fp_44709d6fcb",
-          choices: [
-            {
-              index: 0,
-              delta: { content: meowMessage },
-              logprobs: null,
-              finish_reason: null,
-            },
-          ],
-        },
-        {
-          id: `${Date.now()}`,
-          object: "chat.completion.chunk",
-          created: Date.now(),
-          model: "meowgpt",
-          system_fingerprint: "fp_44709d6fcb",
-          choices: [
-            { index: 0, delta: {}, logprobs: null, finish_reason: "stop" },
-          ],
-        },
-      ];
-      for (const result of streamResult) {
-        yield result;
-        await Bun.sleep(100);
+        };
       }
+      yield {
+        id: `${Date.now()}`,
+        object: "chat.completion.chunk",
+        created: Date.now(),
+        model: "meowgpt",
+        system_fingerprint: "fp_44709d6fcb",
+        choices: [
+          { index: 0, delta: {}, logprobs: null, finish_reason: "stop" },
+        ],
+      };
     },
     {
       body: t.Object({

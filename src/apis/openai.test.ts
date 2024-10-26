@@ -56,19 +56,24 @@ test("gets chat completion (stream)", async () => {
     throw new Error("completion is not readable stream");
   }
 
-  const completion = [];
+  let message = "";
+  let firstChunk: any;
+  let lastChunk: any;
   const reader = stream.getReader();
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
       break;
     }
-    completion.push(JSON.parse(new TextDecoder().decode(value)));
+    const chunk = JSON.parse(new TextDecoder().decode(value));
+    message += chunk?.choices[0]?.delta?.content || "";
+    if (!firstChunk) {
+      firstChunk = chunk;
+    }
+    lastChunk = chunk;
   }
 
-  expect(completion.length).toBe(3);
-
-  expect(completion[0]).toMatchObject({
+  expect(firstChunk).toMatchObject({
     id: expect.any(String),
     object: "chat.completion.chunk",
     created: expect.any(Number),
@@ -84,23 +89,9 @@ test("gets chat completion (stream)", async () => {
     ],
   });
 
-  expect(completion[1]).toMatchObject({
-    id: expect.any(String),
-    object: "chat.completion.chunk",
-    created: expect.any(Number),
-    model: "meowgpt",
-    system_fingerprint: "fp_44709d6fcb",
-    choices: [
-      {
-        index: 0,
-        delta: { content: "Meow, meow meow meow?" },
-        logprobs: null,
-        finish_reason: null,
-      },
-    ],
-  });
+  expect(message).toBe("Meow, meow meow meow?");
 
-  expect(completion[2]).toMatchObject({
+  expect(lastChunk).toMatchObject({
     id: expect.any(String),
     object: "chat.completion.chunk",
     created: expect.any(Number),
