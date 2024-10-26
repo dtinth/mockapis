@@ -40,8 +40,17 @@ test("Authorization Code Flow with PKCE", async () => {
     email_verified: true,
     sub: "test123",
   };
-
-  const { code, codeVerifier } = await tester.getAuthorizeCodeWithPKCE(claims);
+  const codeVerifier = randomCodeVerifier(64);
+  const codeChallengeMethod = "S256";
+  const codeChallenge = generateCodeChallenge(
+    codeVerifier,
+    codeChallengeMethod
+  );
+  const code = await tester.getAuthorizeCodeWithPKCE(
+    claims,
+    codeChallenge,
+    codeChallengeMethod
+  );
   const result = await tester.exchangeCode(code, codeVerifier);
   const userInfo = await tester.getUserInfo(result.access_token);
   expect(userInfo).toMatchObject(claims);
@@ -86,13 +95,11 @@ class OAuthTester {
     return code as string;
   }
 
-  async getAuthorizeCodeWithPKCE(claims: object) {
-    const codeVerifier = randomCodeVerifier(64);
-    const codeChallengeMethod = "S256";
-    const codeChallenge = generateCodeChallenge(
-      codeVerifier,
-      codeChallengeMethod
-    );
+  async getAuthorizeCodeWithPKCE(
+    claims: object,
+    codeChallenge: string = "",
+    codeChallengeMethod: string = "plain"
+  ) {
     const { data } = await api.POST("/oauth/_test/authorize", {
       body: { claims },
       params: {
@@ -106,7 +113,7 @@ class OAuthTester {
       },
     });
     const code = new URL(data!.location).searchParams.get("code");
-    return { code: code as string, codeVerifier };
+    return code as string;
   }
 
   async getIdToken(claims: object) {
