@@ -72,10 +72,7 @@ export function checkCodeVerifier(
   codeChallenge: string,
   method: string
 ) {
-  if (method === "plain") {
-    return codeVerifier === codeChallenge;
-  }
-  return generateCodeChallenge(codeVerifier) === codeChallenge;
+  return generateCodeChallenge(codeVerifier, method) === codeChallenge;
 }
 
 export function generateAccessToken(payload: jose.JWTPayload) {
@@ -130,18 +127,19 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       const { code, code_verifier } = body;
 
       const claims = decodeAuthorizationCode(code);
-      const { key } = claims;
-      if (key) {
+      const { auth_code_params } = claims;
+      if (auth_code_params) {
         if (
           !checkCodeVerifier(
             code_verifier ?? "",
-            key.code_challenge,
-            key.code_challenge_method
+            auth_code_params.code_challenge,
+            auth_code_params.code_challenge_method
           )
         ) {
           throw new Error("Invalid code verifier");
         }
       }
+      delete claims.auth_code_params;
       return {
         access_token: generateAccessToken(claims),
         token_type: "Bearer",
@@ -298,7 +296,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       } else {
         let claims = { ...body.claims };
         if (query.code_challenge != null) {
-          claims["key"] = {
+          claims["auth_code_params"] = {
             code_challenge: query.code_challenge,
             code_challenge_method:
               query.code_challenge_method == null ||
@@ -393,7 +391,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
     },
     {
       body: t.Object({
-        method: t.String(),
+        method: t.Optional(t.String()),
         code_length: t.Number(),
       }),
       response: t.Object({
