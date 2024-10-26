@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { api, apiFetch, baseUrl } from "./test-utils";
+import { generateCodeChallenge, randomCodeVerifier } from "../pkce";
 
 test("OpenID Connect Discovery", async () => {
   const tester = new OAuthTester();
@@ -26,6 +27,22 @@ test("Authorization Code Flow", async () => {
   };
   const code = await tester.getAuthorizeCode(claims);
   const result = await tester.exchangeCode(code);
+  const userInfo = await tester.getUserInfo(result.access_token);
+  expect(userInfo).toMatchObject(claims);
+});
+
+test("Authorization Code Flow with PKCE", async () => {
+  const tester = new OAuthTester();
+
+  const claims = {
+    name: "Test User",
+    email: "testuser@example.com",
+    email_verified: true,
+    sub: "test123",
+  };
+
+  const { code, codeVerifier } = await tester.getAuthorizeCodeWithPKCE(claims);
+  const result = await tester.exchangeCode(code, codeVerifier);
   const userInfo = await tester.getUserInfo(result.access_token);
   expect(userInfo).toMatchObject(claims);
 });
@@ -69,6 +86,29 @@ class OAuthTester {
     return code as string;
   }
 
+  async getAuthorizeCodeWithPKCE(claims: object) {
+    const codeVerifier = randomCodeVerifier(64);
+    const codeChallengeMethod = "S256";
+    const codeChallenge = generateCodeChallenge(
+      codeVerifier,
+      codeChallengeMethod
+    );
+    const { data } = await api.POST("/oauth/_test/authorize", {
+      body: { claims },
+      params: {
+        query: {
+          response_type: "code",
+          redirect_uri: "http://localhost/callback",
+          state: "test_state",
+          code_challenge: codeChallenge,
+          code_challenge_method: codeChallengeMethod,
+        },
+      },
+    });
+    const code = new URL(data!.location).searchParams.get("code");
+    return { code: code as string, codeVerifier };
+  }
+
   async getIdToken(claims: object) {
     const { data } = await api.POST("/oauth/_test/authorize", {
       body: {
@@ -87,13 +127,14 @@ class OAuthTester {
     return idToken as string;
   }
 
-  async exchangeCode(code: string) {
+  async exchangeCode(code: string, codeVerifier?: string) {
     const { data } = await api.POST("/oauth/protocol/openid-connect/token", {
       body: {
         grant_type: "authorization_code",
         code,
         client_id: "test_client",
         client_secret: "test_secret",
+        code_verifier: codeVerifier,
       },
     });
     return data!;
