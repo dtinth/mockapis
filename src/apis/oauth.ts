@@ -411,12 +411,16 @@ export const oauth = defineApi({
 - The API endpoints are designed to mimic [Keycloak](https://www.keycloak.org/)’s paths.
 - The authorize page lets user freely fill in any information, such as \`name\`, \`email\`, \`sub\`.
 - This API supports both “Authorization Code Flow” and “Implicit Flow with OIDC” (not to be confused with the traditional “Implicit Flow”, which is not supported).
+- For Authorization Code Flow, the PKCE extension is supported. You can generate a code verifier and code challenge using the [\`/oauth/_test/pkce_code\`](/oauth/_test/pkce_code) endpoint.
 - For OIDC, the discovery endpoint is available at [\`/oauth/.well-known/openid-configuration\`](/oauth/.well-known/openid-configuration).
 
 This authentication system is shared across all APIs in the mock API server. The following concepts are used:
 
 - **Claims:** Claims are arbitrary data represented in the ID tokens, stored as key-value pairs. Common claims include \`sub\` (user ID), \`name\`, and \`email\`.
 - **Authorization Code:** A code that is normally generated when the user authorizes an application. This code is exchanged for an access token. In the mock APIs, you can generate an authorization code with arbitrary claims using the \`/oauth/_test/code\` endpoint.
+- **PKCE:** Proof Key for Code Exchange (PKCE) is an extension to the OAuth 2.0 authorization code flow. It is used to secure the authorization code from interception. PKCE is used in mobile and native applications where the client secret cannot be stored securely. PKCE is not required for web applications.
+- **Code Verifier:** A random string that is used to generate a code challenge for PKCE.
+- **Code Challenge:** A hashed value of the code verifier that is sent to the authorization server.
 - **ID Token:** A JWT token that contains user information. In the mock APIs, you can generate an ID token with arbitrary claims using the \`/oauth/_test/token\` endpoint.
 - **Access Token:** An opaque token that is used to authenticate requests to the API endpoints. In the mock APIs, you can generate an access token with arbitrary claims using the \`/oauth/_test/token\` endpoint. You can check what data is stored in the token by calling the \`/oauth/protocol/openid-connect/userinfo\` endpoint.
 - **Refresh Token:** A token that can be used to obtain a new access token.
