@@ -1,8 +1,8 @@
 import { html, renderHtml } from "@thai/html";
 import { Elysia, t } from "elysia";
 import * as jose from "jose";
-import { generateCodeChallenge, randomCodeVerifier } from "../pkce";
 import { defineApi } from "../defineApi";
+import { generateCodeChallenge, randomCodeVerifier } from "../pkce";
 import privateKey from "./oauth.private-key.json";
 import publicKey from "./oauth.public-key.json";
 
@@ -90,14 +90,16 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
     "/.well-known/openid-configuration",
     async ({ request }) => {
-      const origin = new URL(request.url).origin;
+      const origin = new URL(request.url).origin.replace("http://", "https://");
       return {
         id_token_signing_alg_values_supported: ["RS256"],
         issuer: `${origin}/oauth`,
         jwks_uri: `${origin}/oauth/.well-known/jwks`,
         authorization_endpoint: `${origin}/oauth/protocol/openid-connect/authorize`,
+        token_endpoint: `${origin}/oauth/protocol/openid-connect/token`,
         response_types_supported: ["id_token"],
         subject_types_supported: ["public", "pairwise"],
+        code_challenge_methods_supported: ["S256", "plain"],
       };
     },
     {
