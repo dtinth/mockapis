@@ -90,7 +90,10 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
     "/.well-known/openid-configuration",
     async ({ request }) => {
-      const origin = new URL(request.url).origin.replace("http://", "https://");
+      let origin = new URL(request.url).origin;
+      if (Bun.env["HTTPS"]) {
+        origin = origin.replace(/^http:/, "https:");
+      }
       return {
         id_token_signing_alg_values_supported: ["RS256"],
         issuer: `${origin}/oauth`,
