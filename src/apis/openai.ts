@@ -29,11 +29,11 @@ const elysia = new Elysia({
             object: t.String(),
             created: t.Number(),
             owned_by: t.String(),
-          }),
+          })
         ),
       }),
       detail: { summary: "List available models" },
-    },
+    }
   )
   .post(
     "/v1/chat/completions",
@@ -41,11 +41,7 @@ const elysia = new Elysia({
       const { messages, stream } = body;
       const lastMessage = messages[messages.length - 1].content;
       const meowMessage = lastMessage.replace(/\w+/g, (a) =>
-        a.toLowerCase() === a
-          ? "meow"
-          : a.toUpperCase() === a
-            ? "MEOW"
-            : "Meow",
+        a.toLowerCase() === a ? "meow" : a.toUpperCase() === a ? "MEOW" : "Meow"
       );
 
       if (!stream) {
@@ -74,7 +70,12 @@ const elysia = new Elysia({
 
       const chunkMeowMessages = meowMessage.split("");
 
-      yield {
+      // Formats the stream according to the OpenAI API as text/event-stream
+      const toStreamMessage = (object: any) => {
+        return `data: ${JSON.stringify(object)}\n\n`;
+      };
+
+      yield toStreamMessage({
         id: `${Date.now()}`,
         object: "chat.completion.chunk",
         created: Date.now(),
@@ -88,10 +89,10 @@ const elysia = new Elysia({
             finish_reason: null,
           },
         ],
-      };
+      });
       for (const meow of chunkMeowMessages) {
         await Bun.sleep(1);
-        yield {
+        yield toStreamMessage({
           id: `${Date.now()}`,
           object: "chat.completion.chunk",
           created: Date.now(),
@@ -105,9 +106,9 @@ const elysia = new Elysia({
               finish_reason: null,
             },
           ],
-        };
+        });
       }
-      yield {
+      yield toStreamMessage({
         id: `${Date.now()}`,
         object: "chat.completion.chunk",
         created: Date.now(),
@@ -116,7 +117,7 @@ const elysia = new Elysia({
         choices: [
           { index: 0, delta: {}, logprobs: null, finish_reason: "stop" },
         ],
-      };
+      });
     },
     {
       body: t.Object({
@@ -125,7 +126,7 @@ const elysia = new Elysia({
           t.Object({
             role: t.String(),
             content: t.String(),
-          }),
+          })
         ),
         stream: t.Optional(t.Boolean()),
       }),
@@ -143,7 +144,7 @@ const elysia = new Elysia({
                 content: t.String(),
               }),
               finish_reason: t.String(),
-            }),
+            })
           ),
           usage: t.Object({
             prompt_tokens: t.Number(),
@@ -151,29 +152,10 @@ const elysia = new Elysia({
             total_tokens: t.Number(),
           }),
         }),
-        t.AsyncIterator(
-          t.Object({
-            id: t.String(),
-            object: t.String(),
-            created: t.Number(),
-            model: t.String(),
-            system_fingerprint: t.String(),
-            choices: t.Array(
-              t.Object({
-                index: t.Number(),
-                delta: t.Object({
-                  role: t.Optional(t.String()),
-                  content: t.Optional(t.String()),
-                }),
-                logprobs: t.Any(),
-                finish_reason: t.Union([t.String(), t.Null()]),
-              }),
-            ),
-          }),
-        ),
+        t.AsyncIterator(t.String()),
       ]),
       detail: { summary: "Get chat completion" },
-    },
+    }
   );
 
 export const openai = defineApi({

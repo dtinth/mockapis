@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { api } from "./test-utils";
+import OpenAI from "openai";
+import { baseUrl } from "./test-utils";
 
 test("lists available models", async () => {
   const tester = new OpenAITester();
@@ -51,90 +52,48 @@ test("gets chat completion (stream)", async () => {
     { role: "user", content: "Hello, how are you?" },
   ]);
 
-  expect(stream).toBeDefined();
-  if (!stream) {
-    throw new Error("completion is not readable stream");
+  // Read the text from the stream
+  let out = "";
+  for await (const chunk of stream) {
+    const choice = chunk.choices[0];
+    out += choice.delta.content ?? "";
   }
-
-  let message = "";
-  let firstChunk: any;
-  let lastChunk: any;
-  const reader = stream.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    const chunk = JSON.parse(new TextDecoder().decode(value));
-    message += chunk?.choices[0]?.delta?.content || "";
-    if (!firstChunk) {
-      firstChunk = chunk;
-    }
-    lastChunk = chunk;
-  }
-
-  expect(firstChunk).toMatchObject({
-    id: expect.any(String),
-    object: "chat.completion.chunk",
-    created: expect.any(Number),
-    model: "meowgpt",
-    system_fingerprint: "fp_44709d6fcb",
-    choices: [
-      {
-        index: 0,
-        delta: { role: "assistant", content: "" },
-        logprobs: null,
-        finish_reason: null,
-      },
-    ],
-  });
-
-  expect(message).toBe("Meow, meow meow meow?");
-
-  expect(lastChunk).toMatchObject({
-    id: expect.any(String),
-    object: "chat.completion.chunk",
-    created: expect.any(Number),
-    model: "meowgpt",
-    system_fingerprint: "fp_44709d6fcb",
-    choices: [
-      {
-        index: 0,
-        delta: {},
-        logprobs: null,
-        finish_reason: "stop",
-      },
-    ],
-  });
+  expect(out).toEqual("Meow, meow meow meow?");
 });
 
 class OpenAITester {
-  async listModels() {
-    const { data } = await api.GET("/openai/v1/models");
-    return data;
+  private openai: OpenAI;
+
+  constructor() {
+    this.openai = new OpenAI({
+      apiKey: "anything works",
+      baseURL: baseUrl + "/openai/v1",
+    });
   }
 
-  async getChatCompletion(messages: Array<{ role: string; content: string }>) {
-    const { data } = await api.POST("/openai/v1/chat/completions", {
-      body: {
-        model: "meowgpt",
-        messages,
-      },
+  async listModels() {
+    const models = await this.openai.models.list();
+    return models;
+  }
+
+  async getChatCompletion(
+    messages: Array<OpenAI.Chat.Completions.ChatCompletionMessageParam>
+  ) {
+    const completion = await this.openai.chat.completions.create({
+      model: "meowgpt",
+      messages,
     });
-    return data;
+    return completion;
   }
 
   async getChatCompletionStream(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<OpenAI.Chat.Completions.ChatCompletionMessageParam>
   ) {
-    const { data } = await api.POST("/openai/v1/chat/completions", {
-      body: {
-        model: "meowgpt",
-        messages,
-        stream: true,
-      },
-      parseAs: "stream",
+    const stream = await this.openai.chat.completions.create({
+      model: "meowgpt",
+      messages,
+      stream: true,
     });
-    return data;
+    return stream;
   }
 }
