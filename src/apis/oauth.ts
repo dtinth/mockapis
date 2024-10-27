@@ -2,6 +2,7 @@ import { html, renderHtml } from "@thai/html";
 import { Elysia, t } from "elysia";
 import * as jose from "jose";
 import { defineApi } from "../defineApi";
+import { generateCodeChallenge, randomCodeVerifier } from "../pkce";
 import privateKey from "./oauth.private-key.json";
 import publicKey from "./oauth.public-key.json";
 
@@ -66,6 +67,14 @@ export function decodeAuthorizationCode(code: string) {
   return JSON.parse(Buffer.from(code.slice(3), "base64").toString("utf-8"));
 }
 
+export function checkCodeVerifier(
+  codeVerifier: string,
+  codeChallenge: string,
+  method: string
+) {
+  return generateCodeChallenge(codeVerifier, method) === codeChallenge;
+}
+
 export function generateAccessToken(payload: jose.JWTPayload) {
   return "at_" + Buffer.from(JSON.stringify(payload)).toString("base64");
 }
@@ -81,14 +90,19 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
     "/.well-known/openid-configuration",
     async ({ request }) => {
-      const origin = new URL(request.url).origin;
+      let origin = new URL(request.url).origin;
+      if (Bun.env["HTTPS"]) {
+        origin = origin.replace(/^http:/, "https:");
+      }
       return {
         id_token_signing_alg_values_supported: ["RS256"],
         issuer: `${origin}/oauth`,
         jwks_uri: `${origin}/oauth/.well-known/jwks`,
         authorization_endpoint: `${origin}/oauth/protocol/openid-connect/authorize`,
+        token_endpoint: `${origin}/oauth/protocol/openid-connect/token`,
         response_types_supported: ["id_token"],
         subject_types_supported: ["public", "pairwise"],
+        code_challenge_methods_supported: ["S256", "plain"],
       };
     },
     {
@@ -115,8 +129,22 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .post(
     "/protocol/openid-connect/token",
     async ({ body }) => {
-      const { code } = body;
+      const { code, code_verifier } = body;
+
       const claims = decodeAuthorizationCode(code);
+      const { auth_code_params } = claims;
+      if (auth_code_params) {
+        if (
+          !checkCodeVerifier(
+            code_verifier ?? "",
+            auth_code_params.code_challenge,
+            auth_code_params.code_challenge_method
+          )
+        ) {
+          throw new Error("Invalid code verifier");
+        }
+      }
+      delete claims.auth_code_params;
       return {
         access_token: generateAccessToken(claims),
         token_type: "Bearer",
@@ -130,6 +158,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         code: t.String(),
         client_id: t.String(),
         client_secret: t.String(),
+        code_verifier: t.Optional(t.String()),
       }),
       response: t.Object({
         access_token: t.String(),
@@ -255,6 +284,8 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         redirect_uri: t.String(),
         state: t.Optional(t.String()),
         scope: t.Optional(t.String()),
+        code_challenge: t.Optional(t.String()),
+        code_challenge_method: t.Optional(t.String()),
       }),
     }
   )
@@ -268,8 +299,20 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       if (responseType === "id_token") {
         params.set("id_token", await generateIdToken(body.claims));
       } else {
-        params.set("code", generateAuthorizationCode(body.claims));
+        let claims = { ...body.claims };
+        if (query.code_challenge != null) {
+          claims["auth_code_params"] = {
+            code_challenge: query.code_challenge,
+            code_challenge_method:
+              query.code_challenge_method == null ||
+              query.code_challenge_method == "plain"
+                ? "plain"
+                : "S256",
+          };
+        }
+        params.set("code", generateAuthorizationCode(claims));
       }
+
       if (query.state != null) {
         params.set("state", query.state);
       }
@@ -292,6 +335,8 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         redirect_uri: t.String(),
         state: t.Optional(t.String()),
         scope: t.Optional(t.String()),
+        code_challenge: t.Optional(t.String()),
+        code_challenge_method: t.Optional(t.String()),
       }),
       response: t.Object({
         location: t.String(),
@@ -340,6 +385,29 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
         summary: "[Test] Generate bearer tokens with arbitrary claims",
       },
     }
+  )
+  .post(
+    "/_test/pkce_code",
+    async ({ body }) => {
+      const { method, code_length } = body;
+      const codeVerifier = randomCodeVerifier(code_length);
+      const codeChallenge = generateCodeChallenge(codeVerifier, method);
+      return { code_verifier: codeVerifier, code_challenge: codeChallenge };
+    },
+    {
+      body: t.Object({
+        method: t.Optional(t.String()),
+        code_length: t.Number(),
+      }),
+      response: t.Object({
+        code_verifier: t.String(),
+        code_challenge: t.String(),
+      }),
+      detail: {
+        summary:
+          "[Test] Generate Code Verifier and Code Challenge for PKCE OAuth",
+      },
+    }
   );
 export const oauth = defineApi({
   tag: "OAuth 2.0 / OIDC",
@@ -348,12 +416,16 @@ export const oauth = defineApi({
 - The API endpoints are designed to mimic [Keycloak](https://www.keycloak.org/)’s paths.
 - The authorize page lets user freely fill in any information, such as \`name\`, \`email\`, \`sub\`.
 - This API supports both “Authorization Code Flow” and “Implicit Flow with OIDC” (not to be confused with the traditional “Implicit Flow”, which is not supported).
+- For Authorization Code Flow, the PKCE extension is supported. You can generate a code verifier and code challenge using the [\`/oauth/_test/pkce_code\`](/oauth/_test/pkce_code) endpoint.
 - For OIDC, the discovery endpoint is available at [\`/oauth/.well-known/openid-configuration\`](/oauth/.well-known/openid-configuration).
 
 This authentication system is shared across all APIs in the mock API server. The following concepts are used:
 
 - **Claims:** Claims are arbitrary data represented in the ID tokens, stored as key-value pairs. Common claims include \`sub\` (user ID), \`name\`, and \`email\`.
 - **Authorization Code:** A code that is normally generated when the user authorizes an application. This code is exchanged for an access token. In the mock APIs, you can generate an authorization code with arbitrary claims using the \`/oauth/_test/code\` endpoint.
+- **PKCE:** Proof Key for Code Exchange (PKCE) is an extension to the OAuth 2.0 authorization code flow. It is used to secure the authorization code from interception. PKCE is used in mobile and native applications where the client secret cannot be stored securely. PKCE is not required for web applications.
+- **Code Verifier:** A random string that is used to generate a code challenge for PKCE.
+- **Code Challenge:** A hashed value of the code verifier that is sent to the authorization server.
 - **ID Token:** A JWT token that contains user information. In the mock APIs, you can generate an ID token with arbitrary claims using the \`/oauth/_test/token\` endpoint.
 - **Access Token:** An opaque token that is used to authenticate requests to the API endpoints. In the mock APIs, you can generate an access token with arbitrary claims using the \`/oauth/_test/token\` endpoint. You can check what data is stored in the token by calling the \`/oauth/protocol/openid-connect/userinfo\` endpoint.
 - **Refresh Token:** A token that can be used to obtain a new access token.
