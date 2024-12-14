@@ -20,7 +20,7 @@ Contributions for more APIs are welcome!
 | [**Eventpop**](https://mockapis.onrender.com/swagger#tag/eventpop) | A mock API that implements a subset of the [Eventpop Public API](https://docs.eventpop.me/). |
 | [**GitHub**](https://mockapis.onrender.com/swagger#tag/github) | A mock API that implements a subset of the [GitHub API](https://docs.github.com/en/rest). |
 | [**OpenAI**](https://mockapis.onrender.com/swagger#tag/openai) | A mock API that implements a subset of the [OpenAI API](https://beta.openai.com/docs/api-reference/chat). |
-| [**LINE**](https://mockapis.onrender.com/swagger#tag/line) | A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/). |
+| [**LINE**](https://mockapis.onrender.com/swagger#tag/line) | A mock API that implements a subset of the [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/) nad [LINE Login API](https://developers.line.biz/en/reference/line-login/). |
 | [**Vonage**](https://mockapis.onrender.com/swagger#tag/vonage) | A mock API that implements a subset of the [Vonage SMS API](https://developer.vonage.com/en/api/sms) for sending SMS messages. |
 | [**dtinth/kio**](https://mockapis.onrender.com/swagger#tag/dtinthkio) | A mock API that implements the endpoints expected by [dtinth/kio](https://github.com/dtinth/kio), a geeky self-checkin kiosk. |
 | [**OpnPayments**](https://mockapis.onrender.com/swagger#tag/opnpayments) | A mock API that implements a subset of the [OpnPayments API](https://docs.opn.ooo) for receiving payments. |
