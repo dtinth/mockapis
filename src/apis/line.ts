@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { defineApi } from "../defineApi";
 import { EventStore } from "../EventStore";
+import { decodeAccessToken, generateAccessToken } from "./oauth";
 
 interface Events {
   push: {
@@ -77,6 +78,55 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         )
       ),
       detail: { summary: "[Test] Get messages sent to a user" },
+    }
+  )
+  .post(
+    "_test/v2/profile",
+    ({ body }) => {
+      return {
+        access_token: generateAccessToken(body),
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: "profile",
+      };
+    },
+    {
+      body: t.Object({
+        userId: t.String(),
+        displayName: t.String(),
+        pictureUrl: t.String(),
+        statusMessage: t.String(),
+      }),
+      response: t.Object({
+        access_token: t.String(),
+        token_type: t.String(),
+        expires_in: t.Number(),
+        scope: t.String(),
+      }),
+      detail: { summary: "[Test] Add user profile" },
+    }
+  )
+  .get(
+    "/v2/profile",
+    ({ headers }) => {
+      const authHeader = headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return { error: "invalid_token" };
+      }
+      const token = authHeader.split(" ")[1];
+      return decodeAccessToken(token) as any;
+    },
+    {
+      headers: t.Object({
+        authorization: t.String(),
+      }),
+      response: t.Object({
+        userId: t.String(),
+        displayName: t.String(),
+        pictureUrl: t.String(),
+        statusMessage: t.String(),
+      }),
+      detail: { summary: "Get user profile" },
     }
   );
 
