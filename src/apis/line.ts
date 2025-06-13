@@ -159,7 +159,7 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         displayName: t.String(),
         pictureUrl: t.String(),
         statusMessage: t.String(),
-      }),
+      }, { additionalProperties: true }),
       detail: { summary: "Get user profile" },
     }
   )
