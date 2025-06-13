@@ -168,7 +168,90 @@ Before creating new functions or components:
 
 **Common mistake**: Creating duplicate HTML generation or similar logic without checking for existing implementations.
 
-### 4. Test HTTP Responses Correctly
+### 4. Write Clean, Focused Tests
+
+Follow these principles for maintainable test code:
+
+#### Test Architecture Pattern
+
+Tests should follow this layered architecture:
+**Test → Tester → api/apiFetch → services**
+
+- **Tests** should be concise and focus on the behavior being tested
+- **Tester classes** encapsulate all API interactions and provide semantic methods
+- **api/apiFetch** utilities handle HTTP communication
+- **Services** contain the actual business logic
+
+#### Rule: Tests Should Not Make Direct API Calls
+
+Tests should never call `api`, `apiFetch`, or other HTTP utilities directly. Instead, they should use methods from Tester classes.
+
+```typescript
+// ✅ Good - Using Tester methods
+test("LINE Login token exchange", async () => {
+  const tester = new LineTester();
+  const code = tester.getLineLoginAuthorizeCode({ sub: "user123" });
+  const result = await tester.exchangeLineLoginCode(code, { 
+    client_id: "test_client" 
+  });
+  expect(result.access_token).toBeDefined();
+});
+
+// ❌ Bad - Direct API calls in tests  
+test("LINE Login token exchange", async () => {
+  const authResponse = await api.POST("/oauth/protocol/openid-connect/token", {
+    body: { grant_type: "authorization_code", code: "test" }
+  });
+  const tokenResponse = await api.POST("/line/oauth2/v2.1/token", {
+    body: { grant_type: "authorization_code", code: authResponse.code }
+  });
+  expect(tokenResponse.access_token).toBeDefined();
+});
+```
+
+#### Keep Tests Concise
+
+- Each test should focus on one specific behavior
+- Use descriptive Tester method names that clearly indicate what they do
+- If a test is getting long, extract the setup logic into Tester methods
+
+```typescript
+// ✅ Good - Concise test using semantic methods
+test("can send message to user", async () => {
+  const tester = new LineTester();
+  await tester.sendMessage("user123", "Hello!");
+  const messages = await tester.getReceivedMessages("user123");
+  expect(messages).toHaveLength(1);
+  expect(messages[0].text).toBe("Hello!");
+});
+
+// ❌ Bad - Long test with implementation details
+test("can send message to user", async () => {
+  const userId = `user_${Math.random()}`;
+  const channelId = `channel_${Math.random()}`;
+  
+  // Setup channel
+  await api.POST("/line/test/channels", {
+    body: { channelId, accessToken: "test_token" }
+  });
+  
+  // Send message
+  await api.POST("/line/v2/bot/message/push", {
+    body: {
+      to: userId,
+      messages: [{ type: "text", text: "Hello!" }]
+    },
+    headers: { Authorization: `Bearer test_token` }
+  });
+  
+  // Verify message
+  const { data } = await api.GET(`/line/test/messages/${userId}`);
+  expect(data.messages).toHaveLength(1);
+  expect(data.messages[0].text).toBe("Hello!");
+});
+```
+
+### 5. Test HTTP Responses Correctly
 
 When testing endpoints that return different content types:
 
@@ -260,30 +343,116 @@ The tester pattern involves creating a class that wraps API calls and provides m
 - Generates unique identifiers for each test run to keep state isolated
 - Makes tests more readable and maintainable
 - Allows for easy reuse of common API interactions across multiple tests
+- Enforces the proper architecture: Test → Tester → api/apiFetch → services
 
-Example:
+### Tester Class Structure
+
+A well-structured Tester class should:
+
+1. **Provide semantic methods** that describe what the action does, not how it's implemented
+2. **Handle all HTTP communication** so tests never call API utilities directly
+3. **Generate unique identifiers** for test isolation
+4. **Encapsulate complex multi-step operations** into single method calls
+5. **Return only the data needed** by tests, not raw HTTP responses
+
+### Example: Good Tester Implementation
 
 ```typescript
-test("my api test", async () => {
-  const tester = new MyApiTester();
-  await tester.doSomething("test");
-  const state = await tester.getInfo();
-  expect(state).toMatchObject({
-    /* expected state */
-  });
-});
-
-class MyApiTester {
-  async doSomething(param: string) {
-    const { data } = await api.POST("/my/api/endpoint", {
-      body: { param },
+class LineTester {
+  private testId = Math.random().toString(36).substring(7);
+  
+  // Semantic method names that describe the business action
+  async sendMessage(userId: string, text: string) {
+    const channelId = `test_channel_${this.testId}`;
+    await this.setupChannel(channelId);
+    
+    const { data } = await api.POST("/line/v2/bot/message/push", {
+      body: {
+        to: userId,
+        messages: [{ type: "text", text }]
+      },
+      headers: { Authorization: `Bearer ${channelId}_token` }
     });
     return data;
   }
-
-  async getInfo() {
-    const { data } = await api.GET("/my/api/info");
+  
+  async getReceivedMessages(userId: string) {
+    const { data } = await api.GET(`/line/test/messages/${userId}`);
+    return data.messages; // Return only what tests need
+  }
+  
+  // Encapsulate OAuth test code generation
+  getLineLoginAuthorizeCode(claims: { sub: string }) {
+    return makeAuthorizationCode({
+      subject: claims.sub,
+      issuer: "https://access.line.me",
+      audience: "test_client"
+    });
+  }
+  
+  // Encapsulate token exchange flow
+  async exchangeLineLoginCode(code: string, params: { client_id: string }) {
+    const { data } = await api.POST("/line/oauth2/v2.1/token", {
+      body: {
+        grant_type: "authorization_code",
+        code,
+        client_id: params.client_id
+      }
+    });
     return data;
+  }
+  
+  // Private helper methods for complex setup
+  private async setupChannel(channelId: string) {
+    await api.POST("/line/test/channels", {
+      body: { channelId, accessToken: `${channelId}_token` }
+    });
+  }
+}
+
+// Clean, focused tests using the Tester
+test("can send message to user", async () => {
+  const tester = new LineTester();
+  await tester.sendMessage("user123", "Hello!");
+  const messages = await tester.getReceivedMessages("user123");
+  expect(messages).toHaveLength(1);
+  expect(messages[0].text).toBe("Hello!");
+});
+
+test("LINE Login token exchange", async () => {
+  const tester = new LineTester();
+  const code = tester.getLineLoginAuthorizeCode({ sub: "user123" });
+  const result = await tester.exchangeLineLoginCode(code, { 
+    client_id: "test_client" 
+  });
+  expect(result.access_token).toBeDefined();
+});
+```
+
+### Common Tester Anti-Patterns to Avoid
+
+```typescript
+// ❌ Bad - Generic method names that don't describe the business action
+class BadTester {
+  async callEndpoint(url: string, body: any) { /* ... */ }
+  async makeRequest(method: string, url: string) { /* ... */ }
+}
+
+// ❌ Bad - Exposing HTTP details to tests
+class BadTester {
+  async sendMessage(userId: string, text: string) {
+    // Returns raw HTTP response instead of just the data
+    return await api.POST("/line/v2/bot/message/push", { /* ... */ });
+  }
+}
+
+// ❌ Bad - Not handling test isolation
+class BadTester {
+  async sendMessage(userId: string, text: string) {
+    // Uses hardcoded values that will conflict between tests
+    await api.POST("/line/test/channels", {
+      body: { channelId: "fixed_channel" }
+    });
   }
 }
 ```
