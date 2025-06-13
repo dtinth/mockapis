@@ -1,7 +1,12 @@
 import { Elysia, t } from "elysia";
 import { defineApi } from "../defineApi";
 import { EventStore } from "../EventStore";
-import { decodeAccessToken, generateAccessToken } from "./oauth";
+import { 
+  decodeAccessToken, 
+  generateAccessToken, 
+  decodeAuthorizationCode,
+  generateIdToken 
+} from "./oauth";
 
 interface Events {
   push: {
@@ -127,6 +132,41 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         statusMessage: t.String(),
       }),
       detail: { summary: "Get user profile" },
+    }
+  )
+  .get(
+    "/oauth2/v2.1/token",
+    async ({ query }) => {
+      const { code, client_id, client_secret } = query;
+      
+      const claims = decodeAuthorizationCode(code);
+      
+      return {
+        access_token: generateAccessToken(claims),
+        token_type: "Bearer", 
+        expires_in: 3600,
+        refresh_token: `rt_line_${Date.now()}`,
+        scope: "profile openid email",
+        id_token: await generateIdToken(claims),
+      };
+    },
+    {
+      query: t.Object({
+        grant_type: t.String(),
+        code: t.String(),
+        redirect_uri: t.String(),
+        client_id: t.String(),
+        client_secret: t.String(),
+      }),
+      response: t.Object({
+        access_token: t.String(),
+        token_type: t.String(),
+        expires_in: t.Number(),
+        refresh_token: t.String(),
+        scope: t.String(),
+        id_token: t.String(),
+      }),
+      detail: { summary: "Exchange authorization code for LINE Login tokens" },
     }
   );
 
