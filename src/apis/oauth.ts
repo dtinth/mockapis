@@ -86,6 +86,82 @@ export function decodeAccessToken(token: string) {
   return JSON.parse(Buffer.from(token.slice(3), "base64").toString("utf-8"));
 }
 
+export function generateAuthorizePage(options: {
+  title: string;
+  header: string;
+  claimsGenerator: string;
+  actionUrl: string;
+}) {
+  const { title, header, claimsGenerator, actionUrl } = options;
+  
+  const page = html`<!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+      </head>
+      <body>
+        <h1>${header}</h1>
+        <form id="authorizeForm">
+          <p>
+            <label for="claims">User info:</label><br />
+            <textarea
+              id="claims"
+              name="claims"
+              rows="10"
+              cols="80"
+            ></textarea>
+          </p>
+          <p>
+            <button name="button">Authorize</button>
+          </p>
+        </form>
+        <script>
+          const form = document.getElementById("authorizeForm");
+          const params = new URLSearchParams(location.search);
+          if (!form.claims.value) {
+            ${claimsGenerator}
+          }
+          form.onsubmit = async (event) => {
+            event.preventDefault();
+            form.button.disabled = true;
+            try {
+              const response = await fetch(
+                "${actionUrl}" + location.search,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    claims: JSON.parse(form.claims.value),
+                  }),
+                }
+              );
+              if (!response.ok) {
+                throw new Error(
+                  response.status + ": " + (await response.text())
+                );
+              }
+              const data = await response.json();
+              console.log(data);
+              if (data.location) {
+                location.href = data.location;
+              }
+            } finally {
+              form.button.disabled = false;
+            }
+          };
+        </script>
+      </body>
+    </html> `;
+  
+  return new Response(renderHtml(page), {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+    },
+  });
+}
+
 const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
     "/.well-known/openid-configuration",
@@ -198,82 +274,25 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
   .get(
     "/protocol/openid-connect/auth",
     async () => {
-      const page = html`<!DOCTYPE html>
-        <html>
-          <head>
-            <title>Authorize</title>
-          </head>
-          <body>
-            <h1>Authorize</h1>
-            <form id="authorizeForm">
-              <p>
-                <label for="claims">User info:</label><br />
-                <textarea
-                  id="claims"
-                  name="claims"
-                  rows="10"
-                  cols="80"
-                ></textarea>
-              </p>
-              <p>
-                <button name="button">Authorize</button>
-              </p>
-            </form>
-            <script>
-              const form = document.getElementById("authorizeForm");
-              const params = new URLSearchParams(location.search);
-              if (!form.claims.value) {
-                const uid = (sessionStorage.uid ||= "u" + Date.now());
-                form.claims.value = JSON.stringify(
-                  {
-                    name: "test user",
-                    email: uid + "@example.com",
-                    email_verified: true,
-                    sub: uid,
-                    iss: location.origin + "/oauth",
-                    aud: params.get("client_id"),
-                  },
-                  null,
-                  2
-                );
-              }
-              form.onsubmit = async (event) => {
-                event.preventDefault();
-                form.button.disabled = true;
-                try {
-                  const response = await fetch(
-                    "/oauth/_test/authorize" + location.search,
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        claims: JSON.parse(form.claims.value),
-                      }),
-                    }
-                  );
-                  if (!response.ok) {
-                    throw new Error(
-                      response.status + ": " + (await response.text())
-                    );
-                  }
-                  const data = await response.json();
-                  console.log(data);
-                  if (data.location) {
-                    location.href = data.location;
-                  }
-                } finally {
-                  form.button.disabled = false;
-                }
-              };
-            </script>
-          </body>
-        </html> `;
-      return new Response(renderHtml(page), {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-        },
+      return generateAuthorizePage({
+        title: "Authorize",
+        header: "Authorize",
+        claimsGenerator: `
+          const uid = (sessionStorage.uid ||= "u" + Date.now());
+          form.claims.value = JSON.stringify(
+            {
+              name: "test user",
+              email: uid + "@example.com",
+              email_verified: true,
+              sub: uid,
+              iss: location.origin + "/oauth",
+              aud: params.get("client_id"),
+            },
+            null,
+            2
+          );
+        `,
+        actionUrl: "/oauth/_test/authorize",
       });
     },
     {

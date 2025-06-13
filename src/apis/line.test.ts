@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { api } from "./test-utils";
+import { api, baseUrl } from "./test-utils";
 
 test("sends message", async () => {
   const tester = new LineTester();
@@ -48,14 +48,11 @@ test("get user profile", async () => {
 });
 
 test("LINE Login authorize page", async () => {
-  const { response } = await api.GET("/line-login/oauth2/v2.1/authorize", {
-    params: {
-      query: {
-        client_id: "test_client",
-        redirect_uri: "http://example.com/callback",
-      },
-    },
-  });
+  const url = new URL("/line-login/oauth2/v2.1/authorize", baseUrl);
+  url.searchParams.set("client_id", "test_client");
+  url.searchParams.set("redirect_uri", "http://example.com/callback");
+  
+  const response = await fetch(url.toString());
 
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toContain("text/html");

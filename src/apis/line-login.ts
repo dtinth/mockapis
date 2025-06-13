@@ -1,89 +1,31 @@
-import { html, renderHtml } from "@thai/html";
 import { Elysia, t } from "elysia";
 import { defineApi } from "../defineApi";
-import { generateAuthorizationCode } from "./oauth";
+import { generateAuthorizationCode, generateAuthorizePage } from "./oauth";
 
 const elysia = new Elysia({ prefix: "/line-login", tags: ["LINE Login"] })
   .get(
     "/oauth2/v2.1/authorize",
     async () => {
-      const page = html`<!DOCTYPE html>
-        <html>
-          <head>
-            <title>LINE Login - Authorize</title>
-          </head>
-          <body>
-            <h1>LINE Login - Authorize</h1>
-            <form id="authorizeForm">
-              <p>
-                <label for="claims">User info:</label><br />
-                <textarea
-                  id="claims"
-                  name="claims"
-                  rows="10"
-                  cols="80"
-                ></textarea>
-              </p>
-              <p>
-                <button name="button">Authorize</button>
-              </p>
-            </form>
-            <script>
-              const form = document.getElementById("authorizeForm");
-              const params = new URLSearchParams(location.search);
-              if (!form.claims.value) {
-                const uid = (sessionStorage.uid ||= "U" + Date.now().toString(36));
-                form.claims.value = JSON.stringify(
-                  {
-                    sub: uid,
-                    name: "test user",
-                    picture: "https://profile.line-scdn.net/0h" + uid + "_test_picture",
-                    email: uid + "@line.me",
-                    email_verified: true,
-                    iss: "https://access.line.me",
-                    aud: params.get("client_id"),
-                  },
-                  null,
-                  2
-                );
-              }
-              form.onsubmit = async (event) => {
-                event.preventDefault();
-                form.button.disabled = true;
-                try {
-                  const response = await fetch(
-                    "/line-login/_test/authorize" + location.search,
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        claims: JSON.parse(form.claims.value),
-                      }),
-                    }
-                  );
-                  if (!response.ok) {
-                    throw new Error(
-                      response.status + ": " + (await response.text())
-                    );
-                  }
-                  const data = await response.json();
-                  console.log(data);
-                  if (data.location) {
-                    location.href = data.location;
-                  }
-                } finally {
-                  form.button.disabled = false;
-                }
-              };
-            </script>
-          </body>
-        </html> `;
-      return new Response(renderHtml(page), {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-        },
+      return generateAuthorizePage({
+        title: "LINE Login - Authorize",
+        header: "LINE Login - Authorize",
+        claimsGenerator: `
+          const uid = (sessionStorage.uid ||= "U" + Date.now().toString(36));
+          form.claims.value = JSON.stringify(
+            {
+              sub: uid,
+              name: "test user",
+              picture: "https://profile.line-scdn.net/0h" + uid + "_test_picture",
+              email: uid + "@line.me",
+              email_verified: true,
+              iss: "https://access.line.me",
+              aud: params.get("client_id"),
+            },
+            null,
+            2
+          );
+        `,
+        actionUrl: "/line-login/_test/authorize",
       });
     },
     {
