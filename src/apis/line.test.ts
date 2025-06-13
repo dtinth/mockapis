@@ -155,15 +155,13 @@ class LineTester {
       redirect_uri: string;
     }
   ) {
-    const { data } = await api.GET("/line/oauth2/v2.1/token", {
-      params: {
-        query: {
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: params.redirect_uri,
-          client_id: params.client_id,
-          client_secret: params.client_secret,
-        },
+    const { data } = await api.POST("/line/oauth2/v2.1/token", {
+      body: {
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: params.redirect_uri,
+        client_id: params.client_id,
+        client_secret: params.client_secret,
       },
     });
     return data!;

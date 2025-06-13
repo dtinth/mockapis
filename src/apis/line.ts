@@ -134,10 +134,10 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
       detail: { summary: "Get user profile" },
     }
   )
-  .get(
+  .post(
     "/oauth2/v2.1/token",
-    async ({ query }) => {
-      const { code, client_id, client_secret } = query;
+    async ({ body }) => {
+      const { code, client_id, client_secret } = body;
       
       const claims = decodeAuthorizationCode(code);
       
@@ -151,7 +151,7 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
       };
     },
     {
-      query: t.Object({
+      body: t.Object({
         grant_type: t.String(),
         code: t.String(),
         redirect_uri: t.String(),
