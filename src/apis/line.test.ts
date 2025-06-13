@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createHash } from "crypto";
 import { api, baseUrl, apiFetch } from "./test-utils";
 
 test("sends message", async () => {
@@ -90,6 +91,55 @@ test("LINE Login token exchange", async () => {
   });
 });
 
+test("generates LINE profile fields when missing from JWT claims", async () => {
+  const tester = new LineTester();
+  
+  // Create claims without LINE profile fields (as they would come from OAuth)
+  const claims = {
+    name: "test user",
+    email: "u1749833090547@example.com",
+    email_verified: true,
+    sub: "u1749833090547",
+    iss: "https://mockapis.onrender.com/oauth",
+    aud: "mock_channel_id"
+  };
+  
+  const profile = await tester.getProfileFromClaims(claims);
+  
+  // Verify the generated fields
+  expect(profile.userId).toBe('U' + tester.md5Hash(claims.sub));
+  expect(profile.displayName).toBe(claims.name);
+  expect(profile.pictureUrl).toBe(`https://api.dicebear.com/9.x/glass/png?seed=${tester.md5Hash(claims.sub)}`);
+  expect(profile.statusMessage).toBe('testing');
+  
+  // Verify original claims are preserved
+  expect(profile.name).toBe(claims.name);
+  expect(profile.email).toBe(claims.email);
+  expect(profile.sub).toBe(claims.sub);
+});
+
+test("preserves existing LINE profile fields when present", async () => {
+  const tester = new LineTester();
+  
+  // Create claims with existing LINE profile fields
+  const claims = {
+    name: "test user",
+    sub: "u1749833090547",
+    userId: "U123456789",
+    displayName: "Custom Display Name",
+    pictureUrl: "https://custom.picture.url/image.jpg",
+    statusMessage: "Custom status"
+  };
+  
+  const profile = await tester.getProfileFromClaims(claims);
+  
+  // Verify existing fields are preserved (not overwritten)
+  expect(profile.userId).toBe('U123456789');
+  expect(profile.displayName).toBe('Custom Display Name');
+  expect(profile.pictureUrl).toBe('https://custom.picture.url/image.jpg');
+  expect(profile.statusMessage).toBe('Custom status');
+});
+
 class LineTester {
   generateUserId() {
     return `U${crypto.randomUUID().replace(/-/g, "")}`;
@@ -165,5 +215,19 @@ class LineTester {
       },
     });
     return data!;
+  }
+
+  md5Hash(text: string): string {
+    return createHash('md5').update(text).digest('hex');
+  }
+
+  async getProfileFromClaims(claims: object) {
+    // Generate access token from claims
+    const { data: tokenData } = await api.POST("/oauth/_test/token", {
+      body: { claims },
+    });
+    
+    // Use the access token to get profile
+    return await this.getUserProfile(tokenData!.access_token);
   }
 }
