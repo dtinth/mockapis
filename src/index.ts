@@ -70,7 +70,7 @@ if (Bun.env["DEMO_INSTANCE"]) {
 
 This demo instance is hosted on a free [Render](https://render.com/) instance.
 It may be slow to respond due to the free tier limitations.
-Feel free to use it, but keep in mind that (1) there is no uptime or reliability guarantee, and (2) the data is not protected and may be lost at any time.
+Feel free to use it, but keep in mind that (1) there is no uptime or reliability guarantee, (2) the data is not protected and may be lost at any time, and (3) the demo instance always runs the latest version, so there is always a risk of breaking changes as we improve the project.
 If you need a more reliable instance, you can [take the source code](https://github.com/dtinth/mockapis) and run your own instance.`;
 }
 
