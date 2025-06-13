@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { api, baseUrl } from "./test-utils";
+import { api, baseUrl, apiFetch } from "./test-utils";
 
 test("sends message", async () => {
   const tester = new LineTester();
@@ -52,10 +52,10 @@ test("LINE Login authorize page", async () => {
   url.searchParams.set("client_id", "test_client");
   url.searchParams.set("redirect_uri", "http://example.com/callback");
   
-  const response = await fetch(url.toString());
+  const response = await apiFetch.raw(url.toString(), { redirect: "manual" });
 
-  expect(response.status).toBe(200);
-  expect(response.headers.get("content-type")).toContain("text/html");
+  expect(response.status).toBe(302);
+  expect(response.headers.get("location")).toMatch(/\/oauth\/protocol\/openid-connect\/auth/);
 });
 
 test("LINE Login token exchange", async () => {
