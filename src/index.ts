@@ -5,6 +5,7 @@ import { dtinthKio } from "./apis/dtinth-kio";
 import { eventpop } from "./apis/eventpop";
 import { github } from "./apis/github";
 import { line } from "./apis/line";
+import { lineLogin } from "./apis/line-login";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
 import { vonage } from "./apis/vonage";
@@ -80,6 +81,7 @@ const apis = [
   github,
   openai,
   line,
+  lineLogin,
   vonage,
   dtinthKio,
   opnPayments,

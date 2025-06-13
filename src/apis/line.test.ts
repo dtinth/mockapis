@@ -47,6 +47,61 @@ test("get user profile", async () => {
   });
 });
 
+test("LINE Login authorize page", async () => {
+  const { response } = await api.GET("/line-login/oauth2/v2.1/authorize", {
+    params: {
+      query: {
+        client_id: "test_client",
+        redirect_uri: "http://example.com/callback",
+      },
+    },
+  });
+
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type")).toContain("text/html");
+});
+
+test("LINE Login token exchange", async () => {
+  const tester = new LineTester();
+  
+  // Generate a test authorization code with LINE Login claims
+  const testClaims = {
+    sub: "U12345",
+    name: "Test User",
+    picture: "https://profile.line-scdn.net/test",
+    email: "test@line.me",
+    email_verified: true,
+  };
+  
+  const { data: codeData } = await api.POST("/oauth/_test/code", {
+    body: { claims: testClaims },
+  });
+  
+  expect(codeData?.code).toBeDefined();
+  
+  // Exchange the code for tokens
+  const { data: tokenData } = await api.GET("/line/oauth2/v2.1/token", {
+    params: {
+      query: {
+        grant_type: "authorization_code",
+        code: codeData!.code,
+        redirect_uri: "http://example.com/callback",
+        client_id: "test_client",
+        client_secret: "test_secret",
+      },
+    },
+  });
+
+  expect(tokenData).toEqual({
+    access_token: expect.any(String),
+    token_type: "Bearer",
+    expires_in: 3600,
+    refresh_token: expect.stringMatching(/^rt_line_/),
+    scope: "profile openid email",
+    id_token: expect.any(String),
+  });
+});
+
 class LineTester {
   generateUserId() {
     return `U${crypto.randomUUID().replace(/-/g, "")}`;
