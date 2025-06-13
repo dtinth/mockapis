@@ -111,11 +111,6 @@ test("generates LINE profile fields when missing from JWT claims", async () => {
   expect(profile.displayName).toBe(claims.name);
   expect(profile.pictureUrl).toBe(`https://api.dicebear.com/9.x/glass/png?seed=${tester.md5Hash(claims.sub)}`);
   expect(profile.statusMessage).toBe('testing');
-  
-  // Verify original claims are preserved
-  expect(profile.name).toBe(claims.name);
-  expect(profile.email).toBe(claims.email);
-  expect(profile.sub).toBe(claims.sub);
 });
 
 test("preserves existing LINE profile fields when present", async () => {

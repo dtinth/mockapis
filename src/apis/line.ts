@@ -14,22 +14,31 @@ function md5(text: string): string {
 }
 
 function generateProfileFromClaims(claims: any) {
-  const profile: any = { ...claims };
+  // Only return LINE profile fields, not original claims
+  const profile: any = {};
   
   // Generate missing LINE profile fields
-  if (!profile.userId && profile.sub) {
-    profile.userId = 'U' + md5(profile.sub);
+  if (claims.userId) {
+    profile.userId = claims.userId;
+  } else if (claims.sub) {
+    profile.userId = 'U' + md5(claims.sub);
   }
   
-  if (!profile.displayName && profile.name) {
-    profile.displayName = profile.name;
+  if (claims.displayName) {
+    profile.displayName = claims.displayName;
+  } else if (claims.name) {
+    profile.displayName = claims.name;
   }
   
-  if (!profile.pictureUrl && profile.sub) {
-    profile.pictureUrl = `https://api.dicebear.com/9.x/glass/png?seed=${md5(profile.sub)}`;
+  if (claims.pictureUrl) {
+    profile.pictureUrl = claims.pictureUrl;
+  } else if (claims.sub) {
+    profile.pictureUrl = `https://api.dicebear.com/9.x/glass/png?seed=${md5(claims.sub)}`;
   }
   
-  if (!profile.statusMessage) {
+  if (claims.statusMessage) {
+    profile.statusMessage = claims.statusMessage;
+  } else {
     profile.statusMessage = 'testing';
   }
   
@@ -159,7 +168,7 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         displayName: t.String(),
         pictureUrl: t.String(),
         statusMessage: t.String(),
-      }, { additionalProperties: true }),
+      }),
       detail: { summary: "Get user profile" },
     }
   )
