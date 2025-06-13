@@ -337,9 +337,14 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       }
 
       if (query.response_mode === "fragment") {
-        url.hash = "#" + params.toString();
+        // For fragment mode, append to existing hash or create new hash
+        const existingFragment = url.hash.substring(1); // Remove the '#'
+        const combinedParams = new URLSearchParams(existingFragment);
+        params.forEach((value, key) => combinedParams.set(key, value));
+        url.hash = "#" + combinedParams.toString();
       } else {
-        url.search = "?" + params.toString();
+        // For query mode, append to existing search params
+        params.forEach((value, key) => url.searchParams.set(key, value));
       }
 
       return { location: `${url}` };
