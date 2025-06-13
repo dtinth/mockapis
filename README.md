@@ -110,6 +110,17 @@ We welcome contributions to expand and improve the Mock APIs project! Here are s
 
 To maintain code quality and avoid common mistakes, please follow these guidelines when contributing:
 
+### 0. Feedback-Driven Documentation Improvement
+
+**When you receive feedback about code mistakes, always follow this pattern:**
+
+1. **Fix the immediate issue** - Address the specific problem mentioned in the feedback
+2. **Identify the root cause** - Ask: "Was this mistake caused by a gap in available information or documentation?"
+3. **Update documentation** - Add guidelines to prevent future developers from making the same mistake
+4. **Capture the learning** - Update documentation with the lesson learned
+
+**Why this matters:** Mistakes often stem from missing or unclear documentation. By turning feedback into documentation improvements, we create a continuous improvement cycle that benefits everyone.
+
 ### 1. Follow Existing Patterns
 
 **Before implementing new features**, always study existing implementations first:

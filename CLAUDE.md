@@ -6,18 +6,7 @@ Please read the README.md file for comprehensive information about this project,
 
 ## Core Principles
 
-### 1. Feedback-Driven Documentation Improvement
-
-**When you receive feedback about code mistakes, always follow this pattern:**
-
-1. **Fix the immediate issue** - Address the specific problem mentioned in the feedback
-2. **Identify the root cause** - Ask: "Was this mistake caused by a gap in available information or documentation?"
-3. **Update documentation** - Add guidelines to prevent future developers (including yourself) from making the same mistake
-4. **Capture the learning** - Update this CLAUDE.md file with the lesson learned
-
-**Why this matters:** Mistakes often stem from missing or unclear documentation. By turning feedback into documentation improvements, we create a continuous improvement cycle that benefits everyone.
-
-### 2. Always Study Existing Patterns First
+### 1. Always Study Existing Patterns First
 
 Before implementing any new feature, **always** examine existing similar implementations:
 
@@ -55,13 +44,7 @@ Before implementing any new feature, **always** examine existing similar impleme
 
 ## When You Make Mistakes
 
-If you receive feedback about code issues:
-
-1. **Don't just fix the code** - understand why the mistake happened
-2. **Ask:** "What documentation could have prevented this?"
-3. **Update the README** if it helps future developers
-4. **Update this CLAUDE.md** if it's a pattern you should remember
-5. **Look for similar issues** in the codebase that might need the same fix
+Follow the "Feedback-Driven Documentation Improvement" pattern outlined in the README.md Development Guidelines section.
 
 ## Commands to Remember
 
