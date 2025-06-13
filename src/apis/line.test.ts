@@ -70,23 +70,14 @@ test("LINE Login token exchange", async () => {
     email_verified: true,
   };
   
-  const { data: codeData } = await api.POST("/oauth/_test/code", {
-    body: { claims: testClaims },
-  });
-  
-  expect(codeData?.code).toBeDefined();
+  const code = await tester.getLineLoginAuthorizeCode(testClaims);
+  expect(code).toBeDefined();
   
   // Exchange the code for tokens
-  const { data: tokenData } = await api.GET("/line/oauth2/v2.1/token", {
-    params: {
-      query: {
-        grant_type: "authorization_code",
-        code: codeData!.code,
-        redirect_uri: "http://example.com/callback",
-        client_id: "test_client",
-        client_secret: "test_secret",
-      },
-    },
+  const tokenData = await tester.exchangeLineLoginCode(code, {
+    client_id: "test_client",
+    client_secret: "test_secret",
+    redirect_uri: "http://example.com/callback",
   });
 
   expect(tokenData).toEqual({
@@ -147,5 +138,34 @@ class LineTester {
       },
     });
     return data;
+  }
+
+  async getLineLoginAuthorizeCode(claims: object) {
+    const { data } = await api.POST("/oauth/_test/code", {
+      body: { claims },
+    });
+    return data!.code;
+  }
+
+  async exchangeLineLoginCode(
+    code: string,
+    params: {
+      client_id: string;
+      client_secret: string;
+      redirect_uri: string;
+    }
+  ) {
+    const { data } = await api.GET("/line/oauth2/v2.1/token", {
+      params: {
+        query: {
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: params.redirect_uri,
+          client_id: params.client_id,
+          client_secret: params.client_secret,
+        },
+      },
+    });
+    return data!;
   }
 }
