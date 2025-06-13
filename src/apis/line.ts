@@ -145,7 +145,10 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         });
 
       const page = html`<!DOCTYPE html>
-        <html data-bs-theme="dark">
+        <html
+          data-bs-theme="light"
+          style="--bs-body-bg: #8cabd9; --bs-body-color: #000; --bs-heading-color: #000; --bs-secondary-color: #000;"
+        >
           <head>
             <title>LINE Messages for ${query.uid}</title>
             <link
@@ -159,12 +162,17 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
           </head>
           <body>
             <div class="container mt-4">
-              <h1>LINE Messages for ${query.uid}</h1>
+              <h1 class="h5 mb-3">LINE Messages for ${query.uid}</h1>
               <div class="row">
                 ${messages.map(
                   (msg, index) => html`
                     <div class="col-12 mb-3">
-                      <div class="card" id="message-card-${index}">
+                      <div
+                        class="card"
+                        id="message-card-${index}"
+                        data-message-id="${msg.id}"
+                        data-message="${JSON.stringify(msg.message)}"
+                      >
                         <div class="card-header">
                           <small class="text-muted"
                             >Message ID: ${msg.id}</small
@@ -172,10 +180,11 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
                         </div>
                         <div class="card-body" style="background: #8cabd9">
                           <div id="message-${index}">Loading…</div>
-                          <script data-message="${JSON.stringify(msg.message)}">
+                          <script>
                             {
                               const messageData = JSON.parse(
-                                document.currentScript.dataset.message
+                                document.currentScript.closest("[data-message]")
+                                  .dataset.message
                               );
                               const container = document.getElementById(
                                 "message-${index}"
