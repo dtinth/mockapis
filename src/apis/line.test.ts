@@ -26,6 +26,27 @@ test("sends message", async () => {
   ]);
 });
 
+test("get user profile", async () => {
+  const tester = new LineTester();
+  const accessToken = await tester.addUserProfile({
+    userId: "mock_userId",
+    displayName: "mock_displayName",
+    pictureUrl: "mock_pictureUrl",
+    statusMessage: "mock_statusMessage",
+  });
+
+  expect(accessToken).not.toBeNull();
+
+  const actual = await tester.getUserProfile(accessToken);
+
+  expect(actual).toEqual({
+    userId: "mock_userId",
+    displayName: "mock_displayName",
+    pictureUrl: "mock_pictureUrl",
+    statusMessage: "mock_statusMessage",
+  });
+});
+
 class LineTester {
   generateUserId() {
     return `U${crypto.randomUUID().replace(/-/g, "")}`;
@@ -47,6 +68,31 @@ class LineTester {
   async getReceivedMessages(uid: string) {
     const { data } = await api.GET("/line/_test/messages", {
       params: { query: { uid } },
+    });
+    return data;
+  }
+
+  async addUserProfile(profile: {
+    userId: string;
+    displayName: string;
+    pictureUrl: string;
+    statusMessage: string;
+  }) {
+    const { data } = await api.POST("/line/_test/v2/profile", {
+      body: {
+        ...profile,
+      },
+    });
+    return data?.access_token;
+  }
+
+  async getUserProfile(accessToken?: string) {
+    const { data } = await api.GET("/line/v2/profile", {
+      params: {
+        header: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      },
     });
     return data;
   }
