@@ -106,6 +106,85 @@ We welcome contributions to expand and improve the Mock APIs project! Here are s
 4. Fix bugs or improve performance
 5. Improve test coverage
 
+## Development Guidelines
+
+To maintain code quality and avoid common mistakes, please follow these guidelines when contributing:
+
+### 1. Follow Existing Patterns
+
+**Before implementing new features**, always study existing implementations first:
+
+- For OAuth flows, see `src/apis/eventpop.ts` as the reference pattern
+- For API structure, examine similar APIs in the `src/apis/` directory
+- For testing approaches, review existing test files
+
+**Common mistake**: Overengineering solutions instead of following established patterns. For example, OAuth authorize endpoints should typically just redirect to the existing OAuth infrastructure rather than creating custom HTML pages.
+
+```typescript
+// ✅ Good - Follow the eventpop.ts pattern
+.get("/oauth/authorize", ({ request }) => {
+  return redirect(
+    `/oauth/protocol/openid-connect/auth?${new URL(request.url).searchParams}`
+  );
+})
+
+// ❌ Bad - Overengineering with custom HTML generation
+.get("/oauth/authorize", () => {
+  return generateComplexAuthorizePage(/* ... */);
+})
+```
+
+### 2. Use Proper Testing Utilities
+
+Always use the configured testing utilities from `src/apis/test-utils/`:
+
+- Use `api` for typed API calls
+- Use `apiFetch` for raw HTTP requests (e.g., when testing redirects or HTML endpoints)
+- Use `makeAuthorizationCode()` for generating OAuth test codes
+
+**Common mistake**: Using raw `fetch` instead of the configured utilities.
+
+```typescript
+// ✅ Good - Use configured utilities
+import { api, apiFetch } from "./test-utils";
+
+// For JSON API calls
+const { data } = await api.GET("/my/endpoint");
+
+// For raw HTTP (redirects, HTML)
+const response = await apiFetch.raw("/my/endpoint", { redirect: "manual" });
+
+// ❌ Bad - Using raw fetch
+const response = await fetch("/my/endpoint");
+```
+
+### 3. Avoid Code Duplication
+
+Before creating new functions or components:
+
+1. Search the codebase for similar functionality
+2. Consider extracting common patterns into reusable utilities
+3. Check if existing functions can be parameterized instead of duplicated
+
+**Common mistake**: Creating duplicate HTML generation or similar logic without checking for existing implementations.
+
+### 4. Test HTTP Responses Correctly
+
+When testing endpoints that return different content types:
+
+- Use `api.GET()` for JSON responses
+- Use `apiFetch.raw()` with `redirect: "manual"` for redirect responses
+- Use `apiFetch()` for HTML or other non-JSON responses
+
+```typescript
+// ✅ Good - Testing redirects
+const response = await apiFetch.raw(url, { redirect: "manual" });
+expect(response.status).toBe(302);
+
+// ❌ Bad - Using JSON client for HTML endpoints
+const { data } = await api.GET("/html/endpoint"); // Will fail with JSON parsing error
+```
+
 ## Running Tests
 
 To run the test suite, first run the dev server, and then run the following command:
