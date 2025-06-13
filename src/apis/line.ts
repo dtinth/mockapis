@@ -1,47 +1,50 @@
-import { Elysia, t } from "elysia";
+import { html, renderHtml } from "@thai/html";
 import { createHash } from "crypto";
+import { Elysia, t } from "elysia";
 import { defineApi } from "../defineApi";
 import { EventStore } from "../EventStore";
-import { 
-  decodeAccessToken, 
-  generateAccessToken, 
+import {
+  decodeAccessToken,
   decodeAuthorizationCode,
-  generateIdToken 
+  generateAccessToken,
+  generateIdToken,
 } from "./oauth";
 
 function md5(text: string): string {
-  return createHash('md5').update(text).digest('hex');
+  return createHash("md5").update(text).digest("hex");
 }
 
 function generateProfileFromClaims(claims: any) {
   // Only return LINE profile fields, not original claims
   const profile: any = {};
-  
+
   // Generate missing LINE profile fields
   if (claims.userId) {
     profile.userId = claims.userId;
   } else if (claims.sub) {
-    profile.userId = 'U' + md5(claims.sub);
+    profile.userId = "U" + md5(claims.sub);
   }
-  
+
   if (claims.displayName) {
     profile.displayName = claims.displayName;
   } else if (claims.name) {
     profile.displayName = claims.name;
   }
-  
+
   if (claims.pictureUrl) {
     profile.pictureUrl = claims.pictureUrl;
   } else if (claims.sub) {
-    profile.pictureUrl = `https://api.dicebear.com/9.x/glass/png?seed=${md5(claims.sub)}`;
+    profile.pictureUrl = `https://api.dicebear.com/9.x/glass/png?seed=${md5(
+      claims.sub
+    )}`;
   }
-  
+
   if (claims.statusMessage) {
     profile.statusMessage = claims.statusMessage;
   } else {
-    profile.statusMessage = 'testing';
+    profile.statusMessage = "testing";
   }
-  
+
   return profile;
 }
 
@@ -119,7 +122,117 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
           })
         )
       ),
-      detail: { summary: "[Test] Get messages sent to a user" },
+      detail: {
+        summary: "[Test] Get messages sent to a user.",
+        description:
+          "To preview as HTML, use the /line/_test/messages.html endpoint",
+      },
+    }
+  )
+  .get(
+    "/_test/messages.html",
+    async ({ query }) => {
+      const eventStore = getEventStore(query.uid);
+      const events = await eventStore.get();
+      const messages = events
+        .filter((e) => e.type === "push")
+        .flatMap((event) => {
+          const { body, sentMessages } = event.payload;
+          return body.messages.map((message, index) => ({
+            id: sentMessages[index].id,
+            message,
+          }));
+        });
+
+      const page = html`<!DOCTYPE html>
+        <html data-bs-theme="dark">
+          <head>
+            <title>LINE Messages for ${query.uid}</title>
+            <link
+              href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+              rel="stylesheet"
+            />
+            <link
+              rel="stylesheet"
+              href="https://cdn.jsdelivr.net/npm/flex-render@0.1.8/dist/index.css"
+            />
+          </head>
+          <body>
+            <div class="container mt-4">
+              <h1>LINE Messages for ${query.uid}</h1>
+              <div class="row">
+                ${messages.map(
+                  (msg, index) => html`
+                    <div class="col-12 mb-3">
+                      <div class="card" id="message-card-${index}">
+                        <div class="card-header">
+                          <small class="text-muted"
+                            >Message ID: ${msg.id}</small
+                          >
+                        </div>
+                        <div class="card-body" style="background: #8cabd9">
+                          <div id="message-${index}">Loading…</div>
+                          <script data-message="${JSON.stringify(msg.message)}">
+                            {
+                              const messageData = JSON.parse(
+                                document.currentScript.dataset.message
+                              );
+                              const container = document.getElementById(
+                                "message-${index}"
+                              );
+                              if (messageData.type === "flex") {
+                                import(
+                                  "https://cdn.jsdelivr.net/npm/flex-render@0.1.8/+esm"
+                                )
+                                  .then(({ render }) => {
+                                    container.innerHTML = render(
+                                      messageData.contents
+                                    );
+                                  })
+                                  .catch((error) => {
+                                    console.error(
+                                      "Error rendering message:",
+                                      error
+                                    );
+                                    container.innerHTML =
+                                      "<pre>Error rendering message</pre>";
+                                  });
+                              } else {
+                                container.innerHTML =
+                                  "<pre>" +
+                                  JSON.stringify(messageData, null, 2) +
+                                  "</pre>";
+                              }
+                            }
+                          </script>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                )}
+              </div>
+              ${messages.length === 0
+                ? html`
+                    <div class="alert alert-info">
+                      No messages found for user ${query.uid}.
+                    </div>
+                  `
+                : ""}
+            </div>
+          </body>
+        </html>`;
+
+      return new Response(renderHtml(page), {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+        },
+      });
+    },
+    {
+      query: t.Object({
+        uid: t.String(),
+      }),
+      detail: { summary: "[Test] Get messages sent to a user as HTML" },
     }
   )
   .post(
@@ -176,12 +289,12 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
     "/oauth2/v2.1/token",
     async ({ body }) => {
       const { code, client_id, client_secret } = body;
-      
+
       const claims = decodeAuthorizationCode(code);
-      
+
       return {
         access_token: generateAccessToken(claims),
-        token_type: "Bearer", 
+        token_type: "Bearer",
         expires_in: 3600,
         refresh_token: `rt_line_${Date.now()}`,
         scope: "profile openid email",

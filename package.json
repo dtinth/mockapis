@@ -11,6 +11,7 @@
     "@elysiajs/swagger": "^1.1.1",
     "@thai/html": "npm:@jsr/thai__html",
     "elysia": "latest",
+    "flex-render": "^0.1.8",
     "ioredis": "^5.4.1",
     "jose": "^5.9.3",
     "ofetch": "^1.4.0",
