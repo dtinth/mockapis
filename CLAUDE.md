@@ -44,7 +44,16 @@ Before implementing any new feature, **always** examine existing similar impleme
 
 ## When You Make Mistakes
 
-Follow the "Feedback-Driven Documentation Improvement" pattern outlined in the README.md Development Guidelines section.
+Follow this "Feedback-Driven Documentation Improvement" pattern:
+
+**When you receive feedback about code mistakes, always follow this pattern:**
+
+1. **Fix the immediate issue** - Address the specific problem mentioned in the feedback
+2. **Identify the root cause** - Ask: "Was this mistake caused by a gap in available information or documentation?"
+3. **Update documentation** - Add guidelines to prevent future developers from making the same mistake
+4. **Capture the learning** - Update the README.md file with the lesson learned
+
+**Why this matters:** Mistakes often stem from missing or unclear documentation. By turning feedback into documentation improvements, we create a continuous improvement cycle that benefits everyone.
 
 ## Commands to Remember
 

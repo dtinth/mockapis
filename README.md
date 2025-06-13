@@ -110,18 +110,7 @@ We welcome contributions to expand and improve the Mock APIs project! Here are s
 
 To maintain code quality and avoid common mistakes, please follow these guidelines when contributing:
 
-### 0. Feedback-Driven Documentation Improvement
-
-**When you receive feedback about code mistakes, always follow this pattern:**
-
-1. **Fix the immediate issue** - Address the specific problem mentioned in the feedback
-2. **Identify the root cause** - Ask: "Was this mistake caused by a gap in available information or documentation?"
-3. **Update documentation** - Add guidelines to prevent future developers from making the same mistake
-4. **Capture the learning** - Update documentation with the lesson learned
-
-**Why this matters:** Mistakes often stem from missing or unclear documentation. By turning feedback into documentation improvements, we create a continuous improvement cycle that benefits everyone.
-
-### 1. Follow Existing Patterns
+### 0. Follow Existing Patterns
 
 **Before implementing new features**, always study existing implementations first:
 
@@ -145,7 +134,7 @@ To maintain code quality and avoid common mistakes, please follow these guidelin
 })
 ```
 
-### 2. Use Proper Testing Utilities
+### 1. Use Proper Testing Utilities
 
 Always use the configured testing utilities from `src/apis/test-utils/`:
 
@@ -169,7 +158,7 @@ const response = await apiFetch.raw("/my/endpoint", { redirect: "manual" });
 const response = await fetch("/my/endpoint");
 ```
 
-### 3. Avoid Code Duplication
+### 2. Avoid Code Duplication
 
 Before creating new functions or components:
 
@@ -179,7 +168,7 @@ Before creating new functions or components:
 
 **Common mistake**: Creating duplicate HTML generation or similar logic without checking for existing implementations.
 
-### 4. Write Clean, Focused Tests
+### 3. Write Clean, Focused Tests
 
 Follow these principles for maintainable test code:
 
@@ -262,7 +251,7 @@ test("can send message to user", async () => {
 });
 ```
 
-### 5. Test HTTP Responses Correctly
+### 4. Test HTTP Responses Correctly
 
 When testing endpoints that return different content types:
 
