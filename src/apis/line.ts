@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { createHash } from "crypto";
 import { defineApi } from "../defineApi";
 import { EventStore } from "../EventStore";
 import { 
@@ -7,6 +8,42 @@ import {
   decodeAuthorizationCode,
   generateIdToken 
 } from "./oauth";
+
+function md5(text: string): string {
+  return createHash('md5').update(text).digest('hex');
+}
+
+function generateProfileFromClaims(claims: any) {
+  // Only return LINE profile fields, not original claims
+  const profile: any = {};
+  
+  // Generate missing LINE profile fields
+  if (claims.userId) {
+    profile.userId = claims.userId;
+  } else if (claims.sub) {
+    profile.userId = 'U' + md5(claims.sub);
+  }
+  
+  if (claims.displayName) {
+    profile.displayName = claims.displayName;
+  } else if (claims.name) {
+    profile.displayName = claims.name;
+  }
+  
+  if (claims.pictureUrl) {
+    profile.pictureUrl = claims.pictureUrl;
+  } else if (claims.sub) {
+    profile.pictureUrl = `https://api.dicebear.com/9.x/glass/png?seed=${md5(claims.sub)}`;
+  }
+  
+  if (claims.statusMessage) {
+    profile.statusMessage = claims.statusMessage;
+  } else {
+    profile.statusMessage = 'testing';
+  }
+  
+  return profile;
+}
 
 interface Events {
   push: {
@@ -119,7 +156,8 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         return { error: "invalid_token" };
       }
       const token = authHeader.split(" ")[1];
-      return decodeAccessToken(token) as any;
+      const claims = decodeAccessToken(token);
+      return generateProfileFromClaims(claims);
     },
     {
       headers: t.Object({
