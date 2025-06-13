@@ -69,6 +69,81 @@ test("OIDC Flow", async () => {
   await tester.verifyIdToken(idToken);
 });
 
+test("response_mode query - preserves existing query params", async () => {
+  const tester = new OAuthTester();
+  const claims = { sub: "test123", name: "Test User" };
+  
+  const { data } = await api.POST("/oauth/_test/authorize", {
+    body: { claims },
+    params: {
+      query: {
+        response_type: "code",
+        response_mode: "query",
+        redirect_uri: "http://example.com/callback?existing=param&another=value",
+        state: "test_state",
+      },
+    },
+  });
+  
+  const redirectUrl = new URL(data!.location);
+  expect(redirectUrl.searchParams.get("existing")).toBe("param");
+  expect(redirectUrl.searchParams.get("another")).toBe("value");
+  expect(redirectUrl.searchParams.get("code")).toBeTruthy();
+  expect(redirectUrl.searchParams.get("state")).toBe("test_state");
+});
+
+test("response_mode fragment - preserves existing fragment params", async () => {
+  const tester = new OAuthTester();
+  const claims = { sub: "test123", name: "Test User" };
+  
+  const { data } = await api.POST("/oauth/_test/authorize", {
+    body: { claims },
+    params: {
+      query: {
+        response_type: "code",
+        response_mode: "fragment",
+        redirect_uri: "http://example.com/callback#existing=param&another=value",
+        state: "test_state",
+      },
+    },
+  });
+  
+  const redirectUrl = new URL(data!.location);
+  const fragmentParams = new URLSearchParams(redirectUrl.hash.substring(1));
+  expect(fragmentParams.get("existing")).toBe("param");
+  expect(fragmentParams.get("another")).toBe("value");
+  expect(fragmentParams.get("code")).toBeTruthy();
+  expect(fragmentParams.get("state")).toBe("test_state");
+});
+
+test("response_mode fragment with id_token", async () => {
+  const tester = new OAuthTester();
+  const claims = { 
+    sub: "test123", 
+    name: "Test User",
+    iss: `${baseUrl}/oauth`,
+    aud: "OAuthTester" 
+  };
+  
+  const { data } = await api.POST("/oauth/_test/authorize", {
+    body: { claims },
+    params: {
+      query: {
+        response_type: "id_token",
+        response_mode: "fragment",
+        redirect_uri: "http://example.com/callback#existing=param",
+        state: "test_state",
+      },
+    },
+  });
+  
+  const redirectUrl = new URL(data!.location);
+  const fragmentParams = new URLSearchParams(redirectUrl.hash.substring(1));
+  expect(fragmentParams.get("existing")).toBe("param");
+  expect(fragmentParams.get("id_token")).toBeTruthy();
+  expect(fragmentParams.get("state")).toBe("test_state");
+});
+
 class OAuthTester {
   async getOpenIdConfiguration() {
     const data = await apiFetch("/oauth/.well-known/openid-configuration");
