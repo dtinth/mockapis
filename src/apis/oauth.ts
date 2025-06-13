@@ -277,7 +277,7 @@ const elysia = new Elysia({ prefix: "/oauth", tags: ["OAuth 2.0 / OIDC"] })
       return generateAuthorizePage({
         title: "Authorize",
         header: "Authorize",
-        claimsGenerator: `
+        claimsGenerator: html`
           const uid = (sessionStorage.uid ||= "u" + Date.now());
           form.claims.value = JSON.stringify(
             {
