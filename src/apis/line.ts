@@ -145,89 +145,106 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
         });
 
       const page = html`<!DOCTYPE html>
-        <html
-          data-bs-theme="light"
-          style="--bs-body-bg: #8cabd9; --bs-body-color: #000; --bs-heading-color: #000; --bs-secondary-color: #000;"
-        >
+        <html>
           <head>
             <title>LINE Messages for ${query.uid}</title>
-            <link
-              href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-              rel="stylesheet"
-            />
             <link
               rel="stylesheet"
               href="https://cdn.jsdelivr.net/npm/flex-render@0.1.8/dist/index.css"
             />
+            <style>
+              body {
+                background: #8cabd9;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                  Roboto, sans-serif;
+                margin: 0;
+                padding: 0 0 20px;
+                color: #000;
+              }
+              h1 {
+                font-size: 1.25rem;
+                margin: 0;
+                padding: 12px 20px 12px;
+                color: #fff;
+                background: #212a41;
+              }
+              .message {
+                margin: 12px 20px 12px;
+              }
+              .message-header {
+                font-size: 0.875rem;
+                color: #fff;
+                margin-bottom: 4px;
+              }
+              .no-messages {
+                background: white;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+                color: #666;
+              }
+              pre {
+                margin: 0;
+                white-space: pre-wrap;
+                font-size: 0.875rem;
+              }
+            </style>
           </head>
           <body>
-            <div class="container mt-4">
-              <h1 class="h5 mb-3">LINE Messages for ${query.uid}</h1>
-              <div class="row">
-                ${messages.map(
-                  (msg, index) => html`
-                    <div class="col-12 mb-3">
-                      <div
-                        class="card"
-                        id="message-card-${index}"
-                        data-message-id="${msg.id}"
-                        data-message="${JSON.stringify(msg.message)}"
-                      >
-                        <div class="card-header">
-                          <small class="text-muted"
-                            >Message ID: ${msg.id}</small
-                          >
-                        </div>
-                        <div class="card-body" style="background: #8cabd9">
-                          <div id="message-${index}">Loading…</div>
-                          <script>
-                            {
-                              const messageData = JSON.parse(
-                                document.currentScript.closest("[data-message]")
-                                  .dataset.message
+            <h1>LINE Messages for ${query.uid}</h1>
+            ${messages.map(
+              (msg, index) => html`
+                <div
+                  class="message"
+                  id="message-card-${index}"
+                  data-message-id="${msg.id}"
+                  data-message="${JSON.stringify(msg.message)}"
+                >
+                  <div class="message-header">Message ID: ${msg.id}</div>
+                  <div class="message-content">
+                    <div id="message-${index}">Loading…</div>
+                    <script>
+                      {
+                        const messageData = JSON.parse(
+                          document.currentScript.closest("[data-message]")
+                            .dataset.message
+                        );
+                        const container = document.getElementById(
+                          "message-${index}"
+                        );
+                        if (messageData.type === "flex") {
+                          import(
+                            "https://cdn.jsdelivr.net/npm/flex-render@0.1.8/+esm"
+                          )
+                            .then(({ render }) => {
+                              container.innerHTML = render(
+                                messageData.contents
                               );
-                              const container = document.getElementById(
-                                "message-${index}"
-                              );
-                              if (messageData.type === "flex") {
-                                import(
-                                  "https://cdn.jsdelivr.net/npm/flex-render@0.1.8/+esm"
-                                )
-                                  .then(({ render }) => {
-                                    container.innerHTML = render(
-                                      messageData.contents
-                                    );
-                                  })
-                                  .catch((error) => {
-                                    console.error(
-                                      "Error rendering message:",
-                                      error
-                                    );
-                                    container.innerHTML =
-                                      "<pre>Error rendering message</pre>";
-                                  });
-                              } else {
-                                container.innerHTML =
-                                  "<pre>" +
-                                  JSON.stringify(messageData, null, 2) +
-                                  "</pre>";
-                              }
-                            }
-                          </script>
-                        </div>
-                      </div>
-                    </div>
-                  `
-                )}
-              </div>
-              ${messages.length === 0
-                ? html`
-                    <div class="alert alert-info">
-                      No messages found for user ${query.uid}.
-                    </div>
-                  `
-                : ""}
-            </div>
+                            })
+                            .catch((error) => {
+                              console.error("Error rendering message:", error);
+                              container.innerHTML =
+                                "<pre>Error rendering message</pre>";
+                            });
+                        } else {
+                          container.innerHTML =
+                            "<pre>" +
+                            JSON.stringify(messageData, null, 2) +
+                            "</pre>";
+                        }
+                      }
+                    </script>
+                  </div>
+                </div>
+              `
+            )}
+            ${messages.length === 0
+              ? html`
+                  <div class="no-messages">
+                    No messages found for user ${query.uid}.
+                  </div>
+                `
+              : ""}
           </body>
         </html>`;
 
