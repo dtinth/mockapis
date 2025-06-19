@@ -11,6 +11,8 @@ import { openai } from "./apis/openai";
 import { opnPayments } from "./apis/opnPayments";
 import { smskub } from "./apis/smskub";
 import { vonage } from "./apis/vonage";
+import { getRedisStats } from "./EventStore";
+import os from "os";
 
 let apiDescription = `**A collection of mock API endpoints of various services,** designed to facilitate end-to-end testing development.
 This project provides a set of simulated APIs that mimic the real services, allowing developers to test their applications without relying on actual external services.
@@ -137,6 +139,29 @@ const app = applyApis(
       });
     },
     { detail: { hide: true } }
+  )
+  .get(
+    "/info",
+    async () => {
+      const redisStats = await getRedisStats();
+      return {
+        storage: redisStats,
+        process: {
+          pid: process.pid,
+          uptime_seconds: process.uptime(),
+          memory: process.memoryUsage(),
+        },
+        os: {
+          uptime_seconds: os.uptime(),
+          memory: {
+            total: os.totalmem(),
+            free: os.freemem(),
+            used: os.totalmem() - os.freemem(),
+          },
+          loadavg: os.loadavg(),
+        },
+      };
+    }
   )
   .listen(+(Bun.env["PORT"] || 46982));
 
