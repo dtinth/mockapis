@@ -25,6 +25,24 @@ export async function getEvents(topic: string) {
   return (await redis.lrange(key, 0, -1)).map((event) => JSON.parse(event));
 }
 
+export async function getRedisStats() {
+  const info = await redis.info();
+  const dbsize = await redis.dbsize();
+  
+  const memorySection = info.split('\r\n').find(line => line.startsWith('used_memory_human:'));
+  const uptimeSection = info.split('\r\n').find(line => line.startsWith('uptime_in_seconds:'));
+  
+  return {
+    keyspace: {
+      total_keys: dbsize,
+    },
+    memory: {
+      used_memory_human: memorySection?.split(':')[1] || 'unknown',
+    },
+    redis_uptime_seconds: uptimeSection ? parseInt(uptimeSection.split(':')[1]) : 0,
+  };
+}
+
 type EventPayloadMapping = Record<string, any>;
 
 type Values<T extends EventPayloadMapping> = T[keyof T];
