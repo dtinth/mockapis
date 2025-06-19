@@ -153,6 +153,11 @@ const app = applyApis(
         },
         os: {
           uptime_seconds: os.uptime(),
+          memory: {
+            total: os.totalmem(),
+            free: os.freemem(),
+            used: os.totalmem() - os.freemem(),
+          },
         },
       };
     }
