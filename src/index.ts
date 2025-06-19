@@ -158,6 +158,7 @@ const app = applyApis(
             free: os.freemem(),
             used: os.totalmem() - os.freemem(),
           },
+          loadavg: os.loadavg(),
         },
       };
     }
