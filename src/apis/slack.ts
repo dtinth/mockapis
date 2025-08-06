@@ -100,15 +100,15 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
       return response;
     },
     {
-      body: t.Object({
-        channel: t.String(),
-        text: t.String(),
-        username: t.Optional(t.String()),
-        icon_url: t.Optional(t.String()),
-        link_names: t.Optional(t.Boolean()),
-        unfurl_links: t.Optional(t.Boolean()),
-        unfurl_media: t.Optional(t.Boolean()),
-      }),
+      body: t.Object(
+        {
+          channel: t.String(),
+          text: t.String(),
+          username: t.Optional(t.String()),
+          icon_url: t.Optional(t.String()),
+        },
+        { additionalProperties: true }
+      ),
       response: t.Union([
         t.Object({
           ok: t.Literal(true),
@@ -197,13 +197,20 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
         <html>
           <head>
             <title>Slack Messages for ${query.channel}</title>
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link
+              rel="preconnect"
+              href="https://fonts.gstatic.com"
+              crossorigin
+            />
+            <link
+              href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap"
+              rel="stylesheet"
+            />
             <style>
               body {
                 background: #f8f8f8;
-                font-family: 'Lato', Slack-Lato, appleLogo, sans-serif;
+                font-family: "Lato", Slack-Lato, appleLogo, sans-serif;
                 margin: 0;
                 padding: 0;
                 color: #1d1c1d;
