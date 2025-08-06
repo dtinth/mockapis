@@ -56,10 +56,11 @@ test("retrieves messages from channel", async () => {
   const tester = new SlackTester();
   const channelId = tester.generateChannelId();
   
-  await tester.postMessage(channelId, "First message", { username: "Bot1" });
+  const result1 = await tester.postMessage(channelId, "First message", { username: "Bot1" });
   await tester.postMessage(channelId, "Second message", { username: "Bot2" });
   
-  const messages = await tester.getChannelMessages(channelId);
+  // Use the response channel ID for retrieval to ensure consistency  
+  const messages = await tester.getChannelMessages(result1.channel);
   
   expect(messages).toHaveLength(2);
   expect(messages[0]).toEqual({
