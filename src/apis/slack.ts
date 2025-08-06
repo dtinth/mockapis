@@ -1,5 +1,6 @@
 import { html, renderHtml } from "@thai/html";
 import { Elysia, t } from "elysia";
+import { createHash } from "node:crypto";
 import { defineApi } from "../defineApi";
 import { EventStore } from "../EventStore";
 
@@ -35,21 +36,22 @@ function getEventStore(channel: string) {
 
 function generateTimestamp(): string {
   const now = Date.now();
-  // Slack format: seconds.microseconds (we'll pad milliseconds to simulate microseconds)
-  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(3, "0")}000`;
+  // Slack format: seconds.microseconds (we'll use random digits for microseconds)
+  const randomMicroseconds = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(
+    3,
+    "0"
+  )}${randomMicroseconds}`;
 }
 
 function normalizeChannelId(channel: string): string {
   // If it starts with # or @, convert to a deterministic mock channel ID
   if (channel.startsWith("#") || channel.startsWith("@")) {
-    // Create a simple hash function for deterministic channel IDs
-    const hash = Math.abs(
-      channel.split("").reduce((a, b) => {
-        a = (a << 5) - a + b.charCodeAt(0);
-        return a & a;
-      }, 0)
-    );
-    return `C${hash.toString().padStart(9, "0")}`;
+    const hash = createHash("md5").update(channel).digest("hex");
+    const num = parseInt(hash.substring(0, 10), 16);
+    return `C${num.toString().slice(0, 9).padStart(9, "0").toUpperCase()}`;
   }
   return channel;
 }
@@ -59,7 +61,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
     "/api/chat.postMessage",
     async ({ body, set, headers }) => {
       // Check for Authorization header
-      const authHeader = headers.authorization;
+      const authHeader = headers["authorization"];
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         set.status = 401;
         return {
@@ -68,15 +70,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
         };
       }
 
-      const {
-        channel,
-        text,
-        username,
-        icon_url,
-        link_names,
-        unfurl_links,
-        unfurl_media,
-      } = body;
+      const { channel, text, username } = body;
       const normalizedChannel = normalizeChannelId(channel);
       const timestamp = generateTimestamp();
 
@@ -89,7 +83,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
       };
 
       const response = {
-        ok: true,
+        ok: true as const,
         channel: normalizedChannel,
         ts: timestamp,
         message,
@@ -153,7 +147,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
             text: body.text,
             username: body.username,
             icon_url: body.icon_url,
-            timestamp: event.timestamp,
+            timestamp: event.timestamp.toString(),
           };
         });
     },
@@ -203,10 +197,13 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
         <html>
           <head>
             <title>Slack Messages for ${query.channel}</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
             <style>
               body {
                 background: #f8f8f8;
-                font-family: Slack-Lato, appleLogo, sans-serif;
+                font-family: 'Lato', Slack-Lato, appleLogo, sans-serif;
                 margin: 0;
                 padding: 0;
                 color: #1d1c1d;
@@ -289,12 +286,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
           </head>
           <body>
             <div class="header">
-              <div class="channel-name">
-                #
-                ${query.channel.startsWith("#")
-                  ? query.channel.slice(1)
-                  : query.channel}
-              </div>
+              <div class="channel-name">${normalizedChannel}</div>
             </div>
             <div class="messages-container">
               ${messages.map(

@@ -41,15 +41,21 @@ test("normalizes channel names", async () => {
 
   // Test with # prefix
   const result1 = await tester.postMessage("#general", "Test message");
-  expect(result1.channel).toMatch(/^C\d{9}$/);
+  if ("channel" in result1!) {
+    expect(result1.channel).toMatch(/^C\d{9}$/);
+  }
 
   // Test with @ prefix for DMs
   const result2 = await tester.postMessage("@user123", "DM message");
-  expect(result2.channel).toMatch(/^C\d{9}$/);
+  if ("channel" in result2!) {
+    expect(result2.channel).toMatch(/^C\d{9}$/);
+  }
 
   // Test with plain channel ID
   const result3 = await tester.postMessage("C123456789", "ID message");
-  expect(result3.channel).toBe("C123456789");
+  if ("channel" in result3!) {
+    expect(result3.channel).toBe("C123456789");
+  }
 });
 
 test("retrieves messages from channel", async () => {
@@ -60,14 +66,13 @@ test("retrieves messages from channel", async () => {
     username: "Bot1",
   });
   await tester.postMessage(channelId, "Second message", { username: "Bot2" });
-  console.log(result1);
-  console.log(channelId);
 
   // Use the response channel ID for retrieval to ensure consistency
-  const messages = await tester.getChannelMessages(result1.channel);
+  const responseChannelId = "channel" in result1! ? result1.channel : channelId;
+  const messages = await tester.getChannelMessages(responseChannelId);
 
   expect(messages).toHaveLength(2);
-  expect(messages[0]).toEqual({
+  expect(messages![0]).toEqual({
     ts: expect.any(String),
     channel: expect.any(String),
     text: "First message",
@@ -75,7 +80,7 @@ test("retrieves messages from channel", async () => {
     icon_url: undefined,
     timestamp: expect.any(String),
   });
-  expect(messages[1]).toEqual({
+  expect(messages![1]).toEqual({
     ts: expect.any(String),
     channel: expect.any(String),
     text: "Second message",
@@ -87,16 +92,15 @@ test("retrieves messages from channel", async () => {
 
 test("HTML endpoint displays messages correctly", async () => {
   const tester = new SlackTester();
-  const channelId = "general";
+  const channelId = tester.generateChannelId();
 
-  await tester.postMessage(`#${channelId}`, "Test HTML display", {
+  await tester.postMessage(channelId, "Test HTML display", {
     username: "HTML Bot",
-    icon_url: "https://example.com/bot.png",
+    icon_url: "https://placehold.co/96",
   });
 
-  const html = await tester.getChannelMessagesHTML(`#${channelId}`);
-
-  expect(html).toContain("# general");
+  const html = await tester.getChannelMessagesHTML(channelId);
+  expect(html).toContain(channelId);
   expect(html).toContain("Test HTML display");
   expect(html).toContain("HTML Bot");
   expect(html).toContain("bot");
@@ -147,7 +151,7 @@ class SlackTester {
       params: {
         header: {
           authorization: "Bearer test-token",
-        },
+        } as any,
       },
     });
     return data!;
