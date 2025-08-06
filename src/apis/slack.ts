@@ -36,18 +36,20 @@ function getEventStore(channel: string) {
 function generateTimestamp(): string {
   const now = Date.now();
   // Slack format: seconds.microseconds (we'll pad milliseconds to simulate microseconds)
-  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(3, '0')}000`;
+  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(3, "0")}000`;
 }
 
 function normalizeChannelId(channel: string): string {
   // If it starts with # or @, convert to a deterministic mock channel ID
-  if (channel.startsWith('#') || channel.startsWith('@')) {
+  if (channel.startsWith("#") || channel.startsWith("@")) {
     // Create a simple hash function for deterministic channel IDs
-    const hash = Math.abs(channel.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0));
-    return `C${hash.toString().padStart(9, '0')}`;
+    const hash = Math.abs(
+      channel.split("").reduce((a, b) => {
+        a = (a << 5) - a + b.charCodeAt(0);
+        return a & a;
+      }, 0)
+    );
+    return `C${hash.toString().padStart(9, "0")}`;
   }
   return channel;
 }
@@ -62,11 +64,19 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
         set.status = 401;
         return {
           ok: false,
-          error: "not_authed"
+          error: "not_authed",
         };
       }
 
-      const { channel, text, username, icon_url, link_names, unfurl_links, unfurl_media } = body;
+      const {
+        channel,
+        text,
+        username,
+        icon_url,
+        link_names,
+        unfurl_links,
+        unfurl_media,
+      } = body;
       const normalizedChannel = normalizeChannelId(channel);
       const timestamp = generateTimestamp();
 
@@ -75,20 +85,23 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
         username: username || "Bot",
         type: "message",
         subtype: "bot_message",
-        ts: timestamp
+        ts: timestamp,
       };
 
       const response = {
         ok: true,
         channel: normalizedChannel,
         ts: timestamp,
-        message
+        message,
       };
 
       const eventStore = getEventStore(normalizedChannel);
       const topic = `slack:${normalizedChannel}`;
       set.headers["x-mockapis-topic"] = topic;
-      await eventStore.add("postMessage", { body: { ...body, channel: normalizedChannel }, response });
+      await eventStore.add("postMessage", {
+        body: { ...body, channel: normalizedChannel },
+        response,
+      });
 
       return response;
     },
@@ -129,7 +142,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
       const normalizedChannel = normalizeChannelId(query.channel);
       const eventStore = getEventStore(normalizedChannel);
       const events = await eventStore.get();
-      
+
       return events
         .filter((e) => e.type === "postMessage")
         .map((event) => {
@@ -171,7 +184,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
       const normalizedChannel = normalizeChannelId(query.channel);
       const eventStore = getEventStore(normalizedChannel);
       const events = await eventStore.get();
-      
+
       const messages = events
         .filter((e) => e.type === "postMessage")
         .map((event) => {
@@ -220,7 +233,7 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
                 border-radius: 8px;
                 margin-bottom: 12px;
                 padding: 16px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
               }
               .message-header {
                 display: flex;
@@ -276,17 +289,27 @@ const elysia = new Elysia({ prefix: "/slack", tags: ["Slack"] })
           </head>
           <body>
             <div class="header">
-              <div class="channel-name"># ${query.channel.startsWith('#') ? query.channel.slice(1) : query.channel}</div>
+              <div class="channel-name">
+                #
+                ${query.channel.startsWith("#")
+                  ? query.channel.slice(1)
+                  : query.channel}
+              </div>
             </div>
             <div class="messages-container">
               ${messages.map(
                 (msg) => html`
                   <div class="message">
                     <div class="message-header">
-                      ${msg.icon_url 
-                        ? html`<img src="${msg.icon_url}" alt="${msg.username}" class="avatar" />`
-                        : html`<div class="avatar">${msg.username.charAt(0).toUpperCase()}</div>`
-                      }
+                      ${msg.icon_url
+                        ? html`<img
+                            src="${msg.icon_url}"
+                            alt="${msg.username}"
+                            class="avatar"
+                          />`
+                        : html`<div class="avatar">
+                            ${msg.username.charAt(0).toUpperCase()}
+                          </div>`}
                       <span class="username">${msg.username}</span>
                       <span class="bot-badge">bot</span>
                       <span class="timestamp">${msg.timestamp}</span>
