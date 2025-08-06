@@ -89,7 +89,7 @@ test("HTML endpoint displays messages correctly", async () => {
     icon_url: "https://example.com/bot.png"
   });
   
-  const html = await tester.getChannelMessagesHTML(channelId);
+  const html = await tester.getChannelMessagesHTML(`#${channelId}`);
   
   expect(html).toContain("# general");
   expect(html).toContain("Test HTML display");
@@ -149,20 +149,20 @@ class SlackTester {
   }
 
   async postMessageWithoutAuth(channel: string, text: string) {
-    const { data } = await api.POST("/slack/api/chat.postMessage", {
+    const { data, error } = await api.POST("/slack/api/chat.postMessage", {
       body: {
         channel,
         text
       }
     });
-    return data!;
+    return data || error;
   }
 
   async getChannelMessages(channel: string) {
     const { data } = await api.GET("/slack/_test/messages", {
       params: { query: { channel } }
     });
-    return data!;
+    return data || [];
   }
 
   async getChannelMessagesHTML(channel: string): Promise<string> {

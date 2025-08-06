@@ -35,16 +35,19 @@ function getEventStore(channel: string) {
 
 function generateTimestamp(): string {
   const now = Date.now();
-  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(6, '0')}`;
+  // Slack format: seconds.microseconds (we'll pad milliseconds to simulate microseconds)
+  return `${Math.floor(now / 1000)}.${String(now % 1000).padStart(3, '0')}000`;
 }
 
 function normalizeChannelId(channel: string): string {
-  // If it starts with # or @, convert to a mock channel ID
+  // If it starts with # or @, convert to a deterministic mock channel ID
   if (channel.startsWith('#') || channel.startsWith('@')) {
-    return `C${Math.abs(channel.split('').reduce((a, b) => {
+    // Create a simple hash function for deterministic channel IDs
+    const hash = Math.abs(channel.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
-    }, 0)).toString().padStart(9, '0')}`;
+    }, 0));
+    return `C${hash.toString().padStart(9, '0')}`;
   }
   return channel;
 }
