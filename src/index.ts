@@ -9,6 +9,7 @@ import { lineLogin } from "./apis/line-login";
 import { oauth } from "./apis/oauth";
 import { openai } from "./apis/openai";
 import { opnPayments } from "./apis/opnPayments";
+import { slack } from "./apis/slack";
 import { smskub } from "./apis/smskub";
 import { vonage } from "./apis/vonage";
 import { getRedisStats } from "./EventStore";
@@ -84,6 +85,7 @@ const apis = [
   openai,
   line,
   lineLogin,
+  slack,
   vonage,
   dtinthKio,
   opnPayments,
