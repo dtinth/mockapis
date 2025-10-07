@@ -46,7 +46,7 @@ You can explore the available APIs and their documentation at our demo instance:
 
 ### Using Pre-built Image
 
-For quick setup without building from source, you can use the pre-built Docker image. Create a `docker-compose.yml` file with the following content:
+For quick setup without building from source, you can use the [pre-built Docker image](https://github.com/dtinth/mockapis/pkgs/container/mockapis). Create a `docker-compose.yml` file with the following content:
 
 ```yaml
 services:
