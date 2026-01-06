@@ -18,4 +18,4 @@ jobs:
       - name: Set up mise
         uses: jdx/mise-action@v3
       - name: Install deps
-        run: mise install bun && bun install
+        run: mise install bun && mise use --global bun@latest && bun install
