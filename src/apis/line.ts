@@ -55,6 +55,12 @@ interface Events {
     };
     sentMessages: { id: string; quoteToken: string }[];
   };
+  reply: {
+    body: {
+      messages: any[];
+    };
+    sentMessages: { id: string; quoteToken: string }[];
+  };
 }
 
 function getEventStore(userId: string) {
@@ -96,12 +102,45 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
       detail: { summary: "Send push message" },
     }
   )
+  .post(
+    "/v2/bot/message/reply",
+    async ({ body, set }) => {
+      const { messages } = body;
+      const sentMessages = messages.map((_, index) => ({
+        id: `${Date.now()}${index}`,
+        quoteToken: Math.random().toString(36).substring(2, 15),
+      }));
+      const eventStore = getEventStore(body.replyToken);
+      const topic = `line:${body.replyToken}`;
+      set.headers["x-mockapis-topic"] = topic;
+      await eventStore.add("reply", { body, sentMessages });
+      return {
+        sentMessages,
+      };
+    },
+    {
+      body: t.Object({
+        replyToken: t.String(),
+        messages: t.Array(t.Any()),
+        notificationDisabled: t.Optional(t.Boolean()),
+      }),
+      response: t.Object({
+        sentMessages: t.Array(
+          t.Object({
+            id: t.String(),
+            quoteToken: t.String(),
+          })
+        ),
+      }),
+      detail: { summary: "Send reply message" },
+    }
+  )
   .get(
     "/_test/messages",
     async ({ query }) => {
       const eventStore = getEventStore(query.uid);
       return (await eventStore.get())
-        .filter((e) => e.type === "push")
+        .filter((e) => e.type === "push" || e.type === "reply")
         .map((event) => {
           const { body, sentMessages } = event.payload;
           return body.messages.map((message, index) => ({
@@ -135,7 +174,7 @@ const elysia = new Elysia({ prefix: "/line", tags: ["LINE"] })
       const eventStore = getEventStore(query.uid);
       const events = await eventStore.get();
       const messages = events
-        .filter((e) => e.type === "push")
+        .filter((e) => e.type === "push" || e.type === "reply")
         .flatMap((event) => {
           const { body, sentMessages } = event.payload;
           return body.messages.map((message, index) => ({

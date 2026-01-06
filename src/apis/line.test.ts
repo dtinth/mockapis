@@ -27,6 +27,31 @@ test("sends message", async () => {
   ]);
 });
 
+test("sends reply message", async () => {
+  const tester = new LineTester();
+  const replyToken = tester.generateUserId(); // Using same format for replyToken
+  const sentMessages = await tester.sendReplyMessages(replyToken, [
+    { type: "text", text: "Reply message 1" },
+    { type: "text", text: "Reply message 2" },
+  ]);
+
+  expect(sentMessages).toEqual(expect.any(Array));
+
+  const receivedMessages = await tester.getReceivedMessages(replyToken);
+  expect(receivedMessages).toEqual([
+    [
+      {
+        id: expect.any(String),
+        message: { type: "text", text: "Reply message 1" },
+      },
+      {
+        id: expect.any(String),
+        message: { type: "text", text: "Reply message 2" },
+      },
+    ],
+  ]);
+});
+
 test("get user profile", async () => {
   const tester = new LineTester();
   const accessToken = await tester.addUserProfile({
@@ -147,6 +172,19 @@ class LineTester {
     const { data } = await api.POST("/line/v2/bot/message/push", {
       body: {
         to,
+        messages: messages,
+      },
+    });
+    return data?.sentMessages;
+  }
+
+  async sendReplyMessages(
+    replyToken: string,
+    messages: Array<{ type: string; text: string }>
+  ) {
+    const { data } = await api.POST("/line/v2/bot/message/reply", {
+      body: {
+        replyToken,
         messages: messages,
       },
     });
